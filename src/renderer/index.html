@@ -78,10 +78,19 @@
             <div id="lodList" class="rate-list"></div>
           </div>
           <div class="perf-card">
-            <h3>开关选项</h3>
-            <label class="switch-label"><input type="checkbox" id="ripple" /><span class="switch"></span><span>波纹控制 Ripple</span></label>
-            <label class="switch-label"><input type="checkbox" id="angleSnap" /><span class="switch"></span><span>角度吸附 Angle Snap</span></label>
-            <label class="switch-label"><input type="checkbox" id="motionSync" /><span class="switch"></span><span>运动同步 Motion Sync</span></label>
+            <h3>传感器修正选项</h3>
+            <div class="opt-item">
+              <label class="switch-label"><input type="checkbox" id="motionSync" /><span class="switch"></span><span class="opt-name">移动同步</span></label>
+              <div class="opt-desc">对鼠标移动进行圆滑算法修正，移动轨迹更准确</div>
+            </div>
+            <div class="opt-item">
+              <label class="switch-label"><input type="checkbox" id="angleSnap" /><span class="switch"></span><span class="opt-name">直线修正</span></label>
+              <div class="opt-desc warn">修正直线移动时的偏移抖动，变成绝对直线移动（游戏中不建议开启）</div>
+            </div>
+            <div class="opt-item">
+              <label class="switch-label"><input type="checkbox" id="ripple" /><span class="switch"></span><span class="opt-name">纹波修正</span></label>
+              <div class="opt-desc warn">对高移速进行算法修正，消除波浪形抖动（游戏中不建议开启）</div>
+            </div>
           </div>
           <div class="perf-card">
             <h3>去抖时间（ms）</h3>
