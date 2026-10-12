@@ -100,23 +100,49 @@ async function onConnect() {
     renderDevice();
     return;
   }
-  setDeviceLabel('正在连接…');
+  showSpinner();
+  setDeviceLabel('正在搜索设备…');
   try {
     const list = await window.api.listDevices();
     if (list.length === 0) {
+      hideSpinner();
       setDeviceLabel('未找到鼠标，请插入后重试', true);
       return;
     }
+    setDeviceLabel('正在连接…');
     const st = await window.api.openDevice(list[0].path);
     state.connected = st.opened;
     state.isWireless = st.isWireless;
     if (state.isWireless) state.maxDpi = state.constants.sensors.PAW3950.maxDpi;
-    setDeviceLabel(st.isWireless ? '已连接（无线）' : '已连接（有线）');
+    setDeviceLabel('正在读取配置…');
     renderDevice();
+
+    // 读取鼠标实际的 DPI 档位配置（档位数 + 当前档位），对齐 UI
+    try {
+      const dpi = await window.api.read('dpiLevel');
+      if (dpi && dpi.levels > 0) {
+        syncDpiLevels(dpi.levels, dpi.current);
+      }
+    } catch (e) {
+      /* 读档位失败不阻塞连接 */
+    }
     renderDpi();
+    setDeviceLabel(st.isWireless ? '已连接（无线）' : '已连接（有线）');
+    hideSpinner();
   } catch (e) {
+    hideSpinner();
     setDeviceLabel('连接失败：' + e.message, true);
   }
+}
+
+function showSpinner() {
+  $('#deviceSpinner').classList.remove('hidden');
+  $('#connectBtn').disabled = true;
+}
+
+function hideSpinner() {
+  $('#deviceSpinner').classList.add('hidden');
+  $('#connectBtn').disabled = false;
 }
 
 async function refreshDeviceState() {
@@ -253,6 +279,20 @@ function dpiRow(label, dpiIndex, axis, color) {
 
 function snapDpi(v) {
   return clamp(Math.round(v / 50) * 50, 50, state.maxDpi);
+}
+
+/** 将 UI 档位数量对齐到鼠标实际档位数（截断或补齐），并同步当前档位 */
+function syncDpiLevels(levels, current) {
+  const last = state.dpiLevels[state.dpiLevels.length - 1] || { x: 800, y: 800, color: '#4da3ff' };
+  while (state.dpiLevels.length < levels) {
+    state.dpiLevels.push({ x: last.x, y: last.y, color: last.color });
+  }
+  if (state.dpiLevels.length > levels) {
+    state.dpiLevels.length = levels;
+  }
+  if (current >= 0 && current < state.dpiLevels.length) {
+    state.currentDpi = current;
+  }
 }
 
 // ── 性能 ───────────────────────────────────────────────────

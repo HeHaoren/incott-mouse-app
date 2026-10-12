@@ -114,7 +114,7 @@ function getConstants() {
 
 // ── IPC 注册 ────────────────────────────────────────────────
 function registerIpc() {
-  ipcMain.handle('mouse:list', () => hid.listDevices());
+  ipcMain.handle('mouse:list', () => hid.listDevicesAsync());
 
   ipcMain.handle('mouse:open', (_e, pathArg) => {
     if (device) device.close();
@@ -145,7 +145,7 @@ function registerIpc() {
     const def = READ_ACTIONS[readType];
     if (!def) throw new Error(`未知读取: ${readType}`);
     device.sendFeatureReport(def.build(...args));
-    await sleep(25);
+    await sleep(50);
     const buf = device.getFeatureReport(P.REPORT_DATA_LEN);
     return def.parse(buf);
   });
@@ -206,6 +206,7 @@ function createWindow() {
 app.whenReady().then(() => {
   registerIpc();
   createWindow();
+  hid.prewarm(); // 后台预枚举设备（不阻塞，连接时秒开）
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
