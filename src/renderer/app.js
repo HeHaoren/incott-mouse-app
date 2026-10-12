@@ -398,25 +398,19 @@ async function onApply() {
 
 function buildApplyOps() {
   const ops = [];
-  const dpiHw = state.dpiLevels.map((lv) => ({
-    x: dpiToHwSafe(lv.x),
-    y: dpiToHwSafe(lv.y),
-  }));
 
   // 按键映射（按矩阵位置 index）
   state.buttons.forEach((btn, i) => {
     ops.push({ action: 'setKey', args: [i, btn.type, btn.value] });
   });
 
-  // DPI 档位值
+  // DPI 档位值（传实际 DPI，主进程 setDpi 内部转硬件值）
   state.dpiLevels.forEach((lv, i) => {
-    const hwX = dpiHw[i].x;
     if (state.xySplit && lv.x !== lv.y) {
-      const hwY = dpiHw[i].y;
-      ops.push({ action: 'setDpi', args: [i, hwX, 1] }); // X 轴
-      ops.push({ action: 'setDpi', args: [i, hwY, 2] }); // Y 轴
+      ops.push({ action: 'setDpi', args: [i, lv.x, 1] }); // X 轴
+      ops.push({ action: 'setDpi', args: [i, lv.y, 2] }); // Y 轴
     } else {
-      ops.push({ action: 'setDpi', args: [i, hwX, 0] });
+      ops.push({ action: 'setDpi', args: [i, lv.x, 0] });
     }
   });
 
