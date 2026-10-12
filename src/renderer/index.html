@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>Incott Mouse Driver</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">INCOTT</span>
+      <span class="brand-sub">鼠标驱动</span>
+    </div>
+    <div class="device-bar">
+      <span id="deviceStatus" class="status-dot off"></span>
+      <span id="deviceLabel" class="device-label">未连接设备</span>
+      <button id="connectBtn" class="btn btn-primary">连接鼠标</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <button class="nav-item active" data-tab="dpi">
+        <span class="nav-icon">◉</span><span>DPI</span>
+      </button>
+      <button class="nav-item" data-tab="buttons">
+        <span class="nav-icon">⌨</span><span>按键映射</span>
+      </button>
+      <button class="nav-item" data-tab="performance">
+        <span class="nav-icon">⚡</span><span>性能</span>
+      </button>
+      <button class="nav-item" data-tab="macro">
+        <span class="nav-icon">≣</span><span>宏</span>
+      </button>
+      <button class="nav-item" data-tab="lighting">
+        <span class="nav-icon">✦</span><span>灯效</span>
+      </button>
+    </nav>
+
+    <main class="content">
+      <!-- DPI -->
+      <section id="tab-dpi" class="tab active">
+        <div class="tab-header">
+          <h2>DPI 设置</h2>
+          <label class="switch-label">
+            <input type="checkbox" id="xySplit" />
+            <span class="switch"></span>
+            <span>X/Y 轴分离</span>
+          </label>
+        </div>
+        <p class="hint">拖动滑块或直接输入数值（50 起步，步进 50）。点击档位卡片可切换当前档位。</p>
+        <div id="dpiList" class="dpi-list"></div>
+        <div class="dpi-actions">
+          <button id="addDpiBtn" class="btn btn-ghost">+ 添加档位</button>
+        </div>
+      </section>
+
+      <!-- 按键映射 -->
+      <section id="tab-buttons" class="tab">
+        <div class="tab-header"><h2>按键映射</h2></div>
+        <p class="hint">选择每个物理按键的功能。</p>
+        <div id="buttonList" class="button-list"></div>
+      </section>
+
+      <!-- 性能 -->
+      <section id="tab-performance" class="tab">
+        <div class="tab-header"><h2>性能</h2></div>
+        <div class="perf-grid">
+          <div class="perf-card">
+            <h3>轮询率</h3>
+            <div id="rateList" class="rate-list"></div>
+          </div>
+          <div class="perf-card">
+            <h3>LOD 抬升距离</h3>
+            <div id="lodList" class="rate-list"></div>
+          </div>
+          <div class="perf-card">
+            <h3>开关选项</h3>
+            <label class="switch-label"><input type="checkbox" id="ripple" /><span class="switch"></span><span>波纹控制 Ripple</span></label>
+            <label class="switch-label"><input type="checkbox" id="angleSnap" /><span class="switch"></span><span>角度吸附 Angle Snap</span></label>
+            <label class="switch-label"><input type="checkbox" id="motionSync" /><span class="switch"></span><span>运动同步 Motion Sync</span></label>
+          </div>
+          <div class="perf-card">
+            <h3>去抖时间（ms）</h3>
+            <input type="number" id="debounce" min="0" max="30" value="8" class="num-input" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 宏 -->
+      <section id="tab-macro" class="tab">
+        <div class="tab-header"><h2>宏</h2></div>
+        <p class="hint">宏录制与编辑（后续版本完善）。</p>
+      </section>
+
+      <!-- 灯效 -->
+      <section id="tab-lighting" class="tab">
+        <div class="tab-header"><h2>灯效</h2></div>
+        <p class="hint">RGB 灯效设置（后续版本完善）。</p>
+      </section>
+    </main>
+  </div>
+
+  <footer class="bottombar">
+    <div id="profileBar" class="profile-bar">
+      <span class="profile-label">配置：</span>
+      <button class="profile-btn" data-profile="0">1</button>
+      <button class="profile-btn" data-profile="1">2</button>
+      <button class="profile-btn" data-profile="2">3</button>
+      <button class="profile-btn" data-profile="3">4</button>
+      <button class="profile-btn" data-profile="4">5</button>
+    </div>
+    <div class="bottombar-actions">
+      <span id="applyStatus" class="apply-status"></span>
+      <button id="applyBtn" class="btn btn-accent">应用到鼠标</button>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
