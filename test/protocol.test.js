@@ -121,6 +121,33 @@ test('读取命令构造', () => {
   assert.deepEqual([...P.buildReadMatchInfo()], [142, 1, 0, 0, 0, 0, 0, 0]);
 });
 
+test('宏分块命令：[7, totalBlocks, blockIndex, 32, slotId]', () => {
+  assert.deepEqual([...P.buildMacroBlock(10, 0, 3)], [7, 10, 0, 32, 3, 0, 0, 0]);
+  assert.deepEqual([...P.buildMacroBlock(10, 9, 0)], [7, 10, 9, 32, 0, 0, 0, 0]);
+});
+
+test('宏编码可分块：320 字节 = 10 块 × 32 字节', () => {
+  const macro = {
+    slot: 0,
+    loopType: 2,
+    cycle: 1,
+    uid: 1,
+    items: Array.from({ length: 5 }, (_, i) => ({
+      press: i % 2 === 0,
+      keyCode: 0x04,
+      delay: 100,
+    })),
+  };
+  const b = P.encodeMacro(macro);
+  assert.equal(b.length, 320);
+  // 分块完整性：每块 32 字节，共 10 块，拼回等于原数据
+  const blocks = [];
+  for (let i = 0; i < 10; i++) blocks.push(b.slice(i * 32, i * 32 + 32));
+  assert.equal(blocks.length, 10);
+  assert.ok(blocks.every((blk) => blk.length === 32));
+  assert.deepEqual(Buffer.concat(blocks), b);
+});
+
 test('所有命令输出均为 8 字节', () => {
   const builders = [
     P.buildSetRate(1000),
