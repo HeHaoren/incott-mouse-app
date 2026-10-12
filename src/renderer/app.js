@@ -106,7 +106,7 @@ async function onConnect() {
     const list = await window.api.listDevices();
     if (list.length === 0) {
       hideSpinner();
-      setDeviceLabel('未找到鼠标，请插入后重试', true);
+      setDeviceLabel('您的设备如果没有显示，请重新拔插一下，然后重试', true);
       return;
     }
     setDeviceLabel('正在连接…');
@@ -334,12 +334,12 @@ function renderProfile() {
 }
 
 // ── 按键映射 ───────────────────────────────────────────────
-const BUTTON_NAMES = ['左键', '右键', '中键', '后退', '前进', 'DPI 键'];
+const BUTTON_NAMES = ['左键', '右键', '中键', '后退', '前进', 'DPI循环'];
 const BUTTON_TYPES = [
-  { id: 'mouse', label: '鼠标功能' },
+  { id: 'mouse', label: '系统按键' },
   { id: 'keyboard', label: '键盘按键' },
   { id: 'media', label: '多媒体' },
-  { id: 'macro', label: '宏' },
+  { id: 'macro', label: '录制宏' },
 ];
 
 function renderButtons() {

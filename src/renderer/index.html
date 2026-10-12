@@ -27,13 +27,13 @@
         <span class="nav-icon">◉</span><span>DPI</span>
       </button>
       <button class="nav-item" data-tab="buttons">
-        <span class="nav-icon">⌨</span><span>按键映射</span>
+        <span class="nav-icon">⌨</span><span>键位设置</span>
       </button>
       <button class="nav-item" data-tab="performance">
-        <span class="nav-icon">⚡</span><span>性能</span>
+        <span class="nav-icon">⚡</span><span>性能设置</span>
       </button>
       <button class="nav-item" data-tab="macro">
-        <span class="nav-icon">≣</span><span>宏</span>
+        <span class="nav-icon">≣</span><span>录制宏</span>
       </button>
       <button class="nav-item" data-tab="lighting">
         <span class="nav-icon">✦</span><span>灯效</span>
@@ -44,74 +44,77 @@
       <!-- DPI -->
       <section id="tab-dpi" class="tab active">
         <div class="tab-header">
-          <h2>DPI 设置</h2>
+          <h2>DPI灵敏度调节</h2>
           <label class="switch-label">
             <input type="checkbox" id="xySplit" />
             <span class="switch"></span>
-            <span>X/Y 轴分离</span>
+            <span>XY轴单独调节</span>
           </label>
         </div>
-        <p class="hint">拖动滑块或直接输入数值（50 起步，步进 50）。点击档位卡片可切换当前档位。</p>
+        <p class="hint">DPI即鼠标移速，使用鼠标的DPI按键可快速切换DPI挡位，通过上方编辑或拖动滑块修改DPI设置</p>
         <div id="dpiList" class="dpi-list"></div>
         <div class="dpi-actions">
-          <button id="addDpiBtn" class="btn btn-ghost">+ 添加档位</button>
+          <button id="addDpiBtn" class="btn btn-ghost">新增档位</button>
         </div>
       </section>
 
-      <!-- 按键映射 -->
+      <!-- 键位设置 -->
       <section id="tab-buttons" class="tab">
-        <div class="tab-header"><h2>按键映射</h2></div>
+        <div class="tab-header"><h2>键位设置</h2></div>
         <p class="hint">选择每个物理按键的功能。</p>
         <div id="buttonList" class="button-list"></div>
       </section>
 
-      <!-- 性能 -->
+      <!-- 性能设置 -->
       <section id="tab-performance" class="tab">
-        <div class="tab-header"><h2>性能</h2></div>
+        <div class="tab-header"><h2>性能设置</h2></div>
         <div class="perf-grid">
           <div class="perf-card">
-            <h3>轮询率</h3>
+            <h3>回报率</h3>
             <div id="rateList" class="rate-list"></div>
+            <div class="opt-desc">设置鼠标与电脑通信频率，提高轮询率可以降低延迟，但会增加部分功耗</div>
           </div>
           <div class="perf-card">
-            <h3>LOD 抬升距离</h3>
+            <h3>鼠标LOD高度调节</h3>
             <div id="lodList" class="rate-list"></div>
+            <div class="opt-desc">设置传感器在鼠标抬起时，最小工作高度</div>
           </div>
           <div class="perf-card">
             <h3>传感器修正选项</h3>
             <div class="opt-item">
-              <label class="switch-label"><input type="checkbox" id="motionSync" /><span class="switch"></span><span class="opt-name">移动同步</span></label>
+              <label class="switch-label"><input type="checkbox" id="motionSync" /><span class="switch"></span><span class="opt-name">运动同步</span></label>
               <div class="opt-desc">对鼠标移动进行圆滑算法修正，移动轨迹更准确</div>
             </div>
             <div class="opt-item">
               <label class="switch-label"><input type="checkbox" id="angleSnap" /><span class="switch"></span><span class="opt-name">直线修正</span></label>
-              <div class="opt-desc warn">修正直线移动时的偏移抖动，变成绝对直线移动（游戏中不建议开启）</div>
+              <div class="opt-desc warn">修正直线移动鼠标时的偏移抖动，变成绝对直线移动（游戏中不建议开启）</div>
             </div>
             <div class="opt-item">
-              <label class="switch-label"><input type="checkbox" id="ripple" /><span class="switch"></span><span class="opt-name">纹波修正</span></label>
-              <div class="opt-desc warn">对高移速进行算法修正，消除波浪形抖动（游戏中不建议开启）</div>
+              <label class="switch-label"><input type="checkbox" id="ripple" /><span class="switch"></span><span class="opt-name">波纹修正</span></label>
+              <div class="opt-desc warn">对高移速情况下进行算法修正，消除波浪形抖动（游戏中不建议开启）</div>
             </div>
           </div>
           <div class="perf-card">
-            <h3>去抖时间（ms）</h3>
+            <h3>按键响应时间设置</h3>
             <input type="number" id="debounce" min="0" max="30" value="8" class="num-input" />
+            <div class="opt-desc">如果出现双击，请将按键延时调到8ms或更高直至没有双击</div>
           </div>
         </div>
       </section>
 
-      <!-- 宏 -->
+      <!-- 录制宏 -->
       <section id="tab-macro" class="tab">
-        <div class="tab-header"><h2>宏编辑器</h2></div>
-        <p class="hint">选择宏槽位，编辑按键序列（按下/释放 + 延迟），上传后可在「按键映射」里把某个按键绑定为宏。</p>
+        <div class="tab-header"><h2>录制宏</h2></div>
+        <p class="hint">选择宏槽位，编辑按键序列（按下/释放 + 延迟），上传后可在「键位设置」里把某个按键绑定为宏。</p>
 
         <div class="macro-slots" id="macroSlots"></div>
 
         <div class="macro-loop">
           <label class="macro-loop-label">循环方式</label>
-          <select id="macroLoopType" class="button-select" style="width:130px">
+          <select id="macroLoopType" class="button-select" style="width:160px">
             <option value="0">按住循环</option>
-            <option value="1">任意键停止</option>
-            <option value="2">循环 N 次</option>
+            <option value="1">循环直到任意键按下</option>
+            <option value="2">循环</option>
           </select>
           <span id="macroCycleWrap">
             <input type="number" id="macroCycle" class="num-input" min="1" value="1" />
@@ -147,7 +150,7 @@
 
   <footer class="bottombar">
     <div id="profileBar" class="profile-bar">
-      <span class="profile-label">配置：</span>
+      <span class="profile-label">板载配置：</span>
       <button class="profile-btn" data-profile="0">1</button>
       <button class="profile-btn" data-profile="1">2</button>
       <button class="profile-btn" data-profile="2">3</button>
