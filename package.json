@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Incott 鼠标驱动 - 独立的桌面配置工具（基于逆向的 HID 协议，不依赖网页驱动）",
   "main": "src/main/index.js",
-  "author": "",
+  "author": "Encott Dev",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -20,14 +20,14 @@
   "build": {
     "appId": "com.encott.mouseapp",
     "productName": "Incott Mouse Driver",
+    "npmRebuild": false,
     "files": [
       "src/**/*",
       "docs/**/*",
       "package.json"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "src/renderer/assets/icon.ico"
+      "target": "nsis"
     }
   }
 }
