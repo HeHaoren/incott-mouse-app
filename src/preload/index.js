@@ -30,4 +30,7 @@ contextBridge.exposeInMainWorld('api', {
 
   /** 批量应用（按序 + 间隔）：apply([{action, args, delay}]) */
   apply: (ops) => ipcRenderer.invoke('mouse:apply', ops),
+
+  /** 上传宏到鼠标（编码 320 字节 + 分块上传） */
+  uploadMacro: (macro) => ipcRenderer.invoke('mouse:uploadMacro', macro),
 });

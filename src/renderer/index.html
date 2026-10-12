@@ -91,8 +91,40 @@
 
       <!-- 宏 -->
       <section id="tab-macro" class="tab">
-        <div class="tab-header"><h2>宏</h2></div>
-        <p class="hint">宏录制与编辑（后续版本完善）。</p>
+        <div class="tab-header"><h2>宏编辑器</h2></div>
+        <p class="hint">选择宏槽位，编辑按键序列（按下/释放 + 延迟），上传后可在「按键映射」里把某个按键绑定为宏。</p>
+
+        <div class="macro-slots" id="macroSlots"></div>
+
+        <div class="macro-loop">
+          <label class="macro-loop-label">循环方式</label>
+          <select id="macroLoopType" class="button-select" style="width:130px">
+            <option value="0">按住循环</option>
+            <option value="1">任意键停止</option>
+            <option value="2">循环 N 次</option>
+          </select>
+          <span id="macroCycleWrap">
+            <input type="number" id="macroCycle" class="num-input" min="1" value="1" />
+            <span class="macro-cycle-unit">次</span>
+          </span>
+        </div>
+
+        <div class="macro-items" id="macroItems"></div>
+
+        <div class="macro-add">
+          <select id="macroKeySel" class="button-select" style="flex:1"></select>
+          <select id="macroPressSel" class="button-select" style="width:80px">
+            <option value="1">按下</option>
+            <option value="0">释放</option>
+          </select>
+          <input type="number" id="macroDelay" class="num-input" min="0" max="60000" value="50" title="延迟(ms)" />
+          <button id="macroAddBtn" class="btn btn-ghost">+ 添加</button>
+        </div>
+
+        <div class="macro-actions">
+          <span id="macroStatus" class="apply-status"></span>
+          <button id="macroUploadBtn" class="btn btn-accent">上传到鼠标</button>
+        </div>
       </section>
 
       <!-- 灯效 -->

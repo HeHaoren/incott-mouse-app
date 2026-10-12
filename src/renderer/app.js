@@ -24,6 +24,8 @@ const state = {
   debounce: 8,
   profile: 0,
   buttons: [], // [{ type: 'mouse'|'keyboard'|'media'|'macro', value }]
+  macros: [], // [{ slot, name, loopType, cycle, items: [{press, keyCode, delay}] }]
+  currentMacro: 0,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -72,6 +74,17 @@ function bindEvents() {
       renderProfile();
     });
   });
+
+  // 宏编辑器
+  $('#macroLoopType').addEventListener('change', (e) => {
+    state.macros[state.currentMacro].loopType = parseInt(e.target.value, 10);
+    renderMacro();
+  });
+  $('#macroCycle').addEventListener('change', (e) => {
+    state.macros[state.currentMacro].cycle = Math.max(1, parseInt(e.target.value) || 1);
+  });
+  $('#macroAddBtn').addEventListener('click', onMacroAddItem);
+  $('#macroUploadBtn').addEventListener('click', onMacroUpload);
 }
 
 function switchTab(name) {
@@ -374,6 +387,156 @@ function buildButtonOptions(type, selectedValue) {
   return frag;
 }
 
+// ── 宏编辑器 ───────────────────────────────────────────────
+let macroKeySelectInited = false;
+
+function initMacroKeySelect() {
+  if (macroKeySelectInited || !state.constants) return;
+  macroKeySelectInited = true;
+  const sel = $('#macroKeySel');
+  Object.entries(state.constants.hidKeyCodes).forEach(([name, code]) => {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+function renderMacro() {
+  const slots = $('#macroSlots');
+  slots.innerHTML = '';
+  state.macros.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className =
+      'macro-slot' +
+      (i === state.currentMacro ? ' active' : '') +
+      (m.items.length ? ' has-content' : '');
+    btn.textContent = i + 1;
+    btn.title = m.items.length ? `${m.name}（${m.items.length} 项）` : m.name;
+    btn.addEventListener('click', () => {
+      state.currentMacro = i;
+      renderMacro();
+    });
+    slots.appendChild(btn);
+  });
+
+  const m = state.macros[state.currentMacro];
+  $('#macroLoopType').value = String(m.loopType);
+  $('#macroCycle').value = m.cycle;
+  $('#macroCycleWrap').style.display = m.loopType === 2 ? '' : 'none';
+  renderMacroItems(m);
+}
+
+function renderMacroItems(m) {
+  const list = $('#macroItems');
+  list.innerHTML = '';
+  if (m.items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'macro-empty';
+    empty.textContent = '暂无动作，从下方添加第一个按键';
+    list.appendChild(empty);
+    return;
+  }
+  m.items.forEach((it, i) => {
+    const row = document.createElement('div');
+    row.className = 'macro-item';
+
+    const idx = document.createElement('span');
+    idx.className = 'macro-item-index';
+    idx.textContent = i + 1;
+
+    const dir = document.createElement('span');
+    dir.className = 'macro-item-dir ' + (it.press ? 'press' : 'release');
+    dir.textContent = it.press ? '↓ 按下' : '↑ 释放';
+
+    const key = document.createElement('span');
+    key.className = 'macro-item-key';
+    key.textContent = codeToKeyName(it.keyCode);
+
+    const delayInput = document.createElement('input');
+    delayInput.type = 'number';
+    delayInput.min = 0;
+    delayInput.max = 60000;
+    delayInput.value = it.delay;
+    delayInput.title = '延迟(ms)';
+    delayInput.addEventListener('change', () => {
+      it.delay = Math.max(0, parseInt(delayInput.value) || 0);
+    });
+    const delayWrap = document.createElement('span');
+    delayWrap.className = 'macro-item-delay';
+    delayWrap.appendChild(delayInput);
+
+    const rm = document.createElement('button');
+    rm.className = 'macro-item-remove';
+    rm.textContent = '✕';
+    rm.title = '删除此动作';
+    rm.addEventListener('click', () => {
+      m.items.splice(i, 1);
+      renderMacro();
+    });
+
+    row.appendChild(idx);
+    row.appendChild(dir);
+    row.appendChild(key);
+    row.appendChild(delayWrap);
+    row.appendChild(rm);
+    list.appendChild(row);
+  });
+}
+
+function codeToKeyName(code) {
+  for (const [name, c] of Object.entries(state.constants.hidKeyCodes)) {
+    if (c === code) return name;
+  }
+  return '0x' + code.toString(16);
+}
+
+function onMacroAddItem() {
+  const keyCode = parseInt($('#macroKeySel').value, 10);
+  if (isNaN(keyCode)) return;
+  const press = $('#macroPressSel').value === '1';
+  const delay = Math.max(0, parseInt($('#macroDelay').value) || 0);
+  const m = state.macros[state.currentMacro];
+  if (m.items.length >= 70) {
+    flashMacroStatus('动作数已达上限（70）', true);
+    return;
+  }
+  m.items.push({ press, keyCode, delay });
+  renderMacro();
+}
+
+async function onMacroUpload() {
+  if (!state.connected) {
+    flashMacroStatus('请先连接鼠标', true);
+    return;
+  }
+  const m = state.macros[state.currentMacro];
+  const status = $('#macroStatus');
+  status.textContent = '正在上传…';
+  status.className = 'apply-status';
+  try {
+    await window.api.uploadMacro({
+      slot: m.slot,
+      loopType: m.loopType,
+      cycle: m.cycle,
+      items: m.items.map((it) => ({ press: it.press, keyCode: it.keyCode, delay: it.delay })),
+    });
+    status.textContent = '✓ 已上传到鼠标';
+    status.className = 'apply-status ok';
+    saveLocalConfig();
+  } catch (e) {
+    status.textContent = '上传失败：' + e.message;
+    status.className = 'apply-status err';
+  }
+}
+
+function flashMacroStatus(text, isErr) {
+  const s = $('#macroStatus');
+  s.textContent = text;
+  s.className = 'apply-status ' + (isErr ? 'err' : '');
+  setTimeout(() => { s.textContent = ''; }, 3000);
+}
+
 // ── 应用 ───────────────────────────────────────────────────
 async function onApply() {
   if (!state.connected) {
@@ -462,6 +625,8 @@ function loadLocalConfig() {
       if (saved.debounce != null) state.debounce = saved.debounce;
       if (saved.profile != null) state.profile = saved.profile;
       if (Array.isArray(saved.buttons)) state.buttons = saved.buttons;
+      if (Array.isArray(saved.macros)) state.macros = saved.macros;
+      if (saved.currentMacro != null) state.currentMacro = saved.currentMacro;
     }
   } catch (_) { /* 忽略 */ }
 
@@ -486,6 +651,13 @@ function loadLocalConfig() {
       { type: 'mouse', value: 'DPI_LOOP' },
     ];
   }
+
+  if (state.macros.length === 0) {
+    state.macros = [];
+    for (let s = 0; s < 10; s++) {
+      state.macros.push({ slot: s, name: `宏 ${s + 1}`, loopType: 2, cycle: 1, items: [] });
+    }
+  }
 }
 
 function saveLocalConfig() {
@@ -501,6 +673,8 @@ function saveLocalConfig() {
     debounce: state.debounce,
     profile: state.profile,
     buttons: state.buttons,
+    macros: state.macros,
+    currentMacro: state.currentMacro,
   }));
 }
 
@@ -510,6 +684,8 @@ function renderAll() {
   renderPerformance();
   renderProfile();
   renderButtons();
+  initMacroKeySelect();
+  renderMacro();
   // 恢复开关状态
   $('#xySplit').checked = state.xySplit;
   $('#ripple').checked = state.ripple;

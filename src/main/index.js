@@ -162,6 +162,24 @@ function registerIpc() {
     }
     return true;
   });
+
+  // 宏上传：编码 320 字节后分 10 块，每块 feature report 准备 + output report 传数据
+  ipcMain.handle('mouse:uploadMacro', async (_e, macro) => {
+    if (!device) throw new Error('设备未连接，请先连接鼠标');
+    if (macro == null || typeof macro.slot !== 'number') {
+      throw new Error('宏数据无效');
+    }
+    if (macro.uid == null) macro.uid = Date.now() >>> 0;
+    const bytes = P.encodeMacro(macro);
+    const slot = macro.slot & 0xff;
+    for (let i = 0; i < 10; i++) {
+      device.sendFeatureReport(P.buildMacroBlock(10, i, slot));
+      await sleep(80);
+      device.sendReport(bytes.slice(i * 32, i * 32 + 32));
+      await sleep(80);
+    }
+    return true;
+  });
 }
 
 function createWindow() {
