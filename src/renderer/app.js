@@ -56,6 +56,10 @@ function bindEvents() {
   $('#addDpiBtn').addEventListener('click', onAddDpi);
   $('#xySplit').addEventListener('change', (e) => {
     state.xySplit = e.target.checked;
+    if (state.xySplit) {
+      // 开启 XY 轴单独调节时，Y 轴先同步成 X 轴的当前值，避免残留不一致
+      state.dpiLevels.forEach((lv) => { lv.y = lv.x; });
+    }
     renderDpi();
   });
 
@@ -249,13 +253,22 @@ function dpiRow(label, dpiIndex, axis, color) {
   input.max = state.maxDpi;
   input.step = 50;
   input.value = state.dpiLevels[dpiIndex][axis];
-  input.addEventListener('change', () => {
+
+  const applyInput = () => {
     let v = parseInt(input.value);
-    if (isNaN(v)) v = 50;
+    if (isNaN(v)) v = state.dpiLevels[dpiIndex][axis]; // 非法输入回退原值
     v = snapDpi(v);
     state.dpiLevels[dpiIndex][axis] = v;
     slider.value = v;
     input.value = v;
+  };
+  input.addEventListener('change', applyInput); // 失焦/上下箭头
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyInput(); // 回车立即应用输入
+      input.blur();
+    }
   });
 
   const slider = document.createElement('input');
