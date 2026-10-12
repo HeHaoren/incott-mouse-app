@@ -12,9 +12,10 @@
 'use strict';
 
 const path = require('path');
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const hid = require('./hid');
 const P = require('../shared/protocol');
+const i18n = require('../shared/i18n');
 
 let device = null; // 当前打开的 MouseDevice
 let mainWindow = null;
@@ -180,6 +181,43 @@ function registerIpc() {
     }
     return true;
   });
+
+  // 语言切换：同步主进程菜单
+  ipcMain.handle('i18n:setLang', (_e, lang) => {
+    i18n.setLang(lang);
+    buildMenu();
+    return i18n.getLang();
+  });
+}
+
+/** 构建应用菜单（随语言切换重建） */
+function buildMenu() {
+  const t = i18n.t;
+  const template = [
+    {
+      label: t('menuFile'),
+      submenu: [{ label: t('menuQuit'), role: 'quit' }],
+    },
+    {
+      label: t('menuLanguage'),
+      submenu: [
+        { label: '中文', type: 'checkbox', checked: i18n.getLang() === 'zh', click: () => { i18n.setLang('zh'); buildMenu(); broadcastLang('zh'); } },
+        { label: 'English', type: 'checkbox', checked: i18n.getLang() === 'en', click: () => { i18n.setLang('en'); buildMenu(); broadcastLang('en'); } },
+      ],
+    },
+    {
+      label: t('menuHelp'),
+      submenu: [
+        { label: t('menuAbout'), click: () => { const { dialog } = require('electron'); dialog.showMessageBox({ message: t('aboutText') }); } },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+/** 广播语言切换给渲染进程 */
+function broadcastLang(lang) {
+  if (mainWindow) mainWindow.webContents.send('i18n:changed', lang);
 }
 
 function createWindow() {
@@ -194,6 +232,7 @@ function createWindow() {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false, // 允许 preload require 本地模块（shared/i18n）
     },
   });
 
@@ -206,6 +245,7 @@ function createWindow() {
 app.whenReady().then(() => {
   registerIpc();
   createWindow();
+  buildMenu(); // 应用菜单（中英文）
   hid.prewarm(); // 后台预枚举设备（不阻塞，连接时秒开）
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -1,0 +1,209 @@
+/**
+ * i18n 文案字典 —— 中英文切换。
+ * 中文取官网 text_sc-v106.js，英文取官网 text_en-v106.js（逐字对齐）。
+ * 主进程（菜单）与渲染进程（UI）共用本模块。
+ */
+
+'use strict';
+
+const messages = {
+  zh: {
+    // 顶栏
+    brandSub: '鼠标驱动',
+    notConnected: '未连接设备',
+    connect: '连接鼠标',
+    disconnect: '断开',
+    // 导航
+    navDpi: 'DPI',
+    navButtons: '键位设置',
+    navPerformance: '性能设置',
+    navMacro: '录制宏',
+    navLighting: '灯效',
+    // DPI
+    dpiTitle: 'DPI灵敏度调节',
+    xySplit: 'XY轴单独调节',
+    dpiHint: 'DPI即鼠标移速，使用鼠标的DPI按键可快速切换DPI挡位，通过上方编辑或拖动滑块修改DPI设置',
+    addDpi: '新增档位',
+    // 键位
+    buttonsTitle: '键位设置',
+    buttonsHint: '选择每个物理按键的功能。',
+    // 性能
+    performanceTitle: '性能设置',
+    reportRate: '回报率',
+    reportRateDesc: '设置鼠标与电脑通信频率，提高轮询率可以降低延迟，但会增加部分功耗',
+    lod: '鼠标LOD高度调节',
+    lodDesc: '设置传感器在鼠标抬起时，最小工作高度',
+    sensorOptions: '传感器修正选项',
+    motionSync: '运动同步',
+    motionSyncDesc: '对鼠标移动进行圆滑算法修正，移动轨迹更准确',
+    angleSnap: '直线修正',
+    angleSnapDesc: '修正直线移动鼠标时的偏移抖动，变成绝对直线移动（游戏中不建议开启）',
+    ripple: '波纹修正',
+    rippleDesc: '对高移速情况下进行算法修正，消除波浪形抖动（游戏中不建议开启）',
+    debounce: '按键响应时间设置',
+    debounceDesc: '如果出现双击，请将按键延时调到8ms或更高直至没有双击',
+    // 宏
+    macroTitle: '录制宏',
+    macroHint: '选择宏槽位，编辑按键序列（按下/释放 + 延迟），上传后可在「键位设置」里把某个按键绑定为宏。',
+    loopType: '循环方式',
+    loopHold: '按住循环',
+    loopAnyKey: '循环直到任意键按下',
+    loopN: '循环',
+    times: '次',
+    press: '按下',
+    release: '释放',
+    addAction: '+ 添加',
+    uploadMacro: '上传到鼠标',
+    macroEmpty: '暂无动作，从下方添加第一个按键',
+    macroFull: '动作数已达上限（70）',
+    pressDir: '↓ 按下',
+    releaseDir: '↑ 释放',
+    // 灯效
+    lightingTitle: '灯效',
+    lightingHint: 'RGB 灯效设置（后续版本完善）。',
+    // 底栏
+    onboardConfig: '板载配置：',
+    apply: '应用到鼠标',
+    // 动态状态
+    searching: '正在搜索设备…',
+    connecting: '正在连接…',
+    readingConfig: '正在读取配置…',
+    connectedWireless: '已连接（无线）',
+    connectedWired: '已连接（有线）',
+    deviceNotFound: '您的设备如果没有显示，请重新拔插一下，然后重试',
+    connectFailed: '连接失败：',
+    pleaseConnect: '请先连接鼠标',
+    applying: '正在应用…',
+    applied: '✓ 已应用',
+    applyFailed: '应用失败：',
+    uploading: '正在上传…',
+    uploaded: '✓ 已上传到鼠标',
+    uploadFailed: '上传失败：',
+    // 按键
+    keyLeft: '左键',
+    keyRight: '右键',
+    keyMiddle: '中键',
+    keyBack: '后退',
+    keyForward: '前进',
+    keyDpi: 'DPI循环',
+    typeSystem: '系统按键',
+    typeKeyboard: '键盘按键',
+    typeMedia: '多媒体',
+    typeMacro: '录制宏',
+    removeDpi: '删除档位',
+    removeAction: '删除此动作',
+    delayMs: '延迟(ms)',
+    macroPrefix: '宏 ',
+    itemUnit: '项',
+    // 菜单
+    menuFile: '文件',
+    menuQuit: '退出',
+    menuLanguage: '语言',
+    menuHelp: '帮助',
+    menuAbout: '关于',
+    aboutText: 'Incott 鼠标驱动 —— 独立桌面配置工具',
+  },
+
+  en: {
+    brandSub: 'Mouse Driver',
+    notConnected: 'Not connected',
+    connect: 'Connect',
+    disconnect: 'Disconnect',
+    navDpi: 'DPI',
+    navButtons: 'Button',
+    navPerformance: 'Performance',
+    navMacro: 'Macro',
+    navLighting: 'Lighting',
+    dpiTitle: 'DPI Settings',
+    xySplit: 'XY is adjusted separately',
+    dpiHint: 'DPI is the mouse movement speed, modify the DPI setting by editing or dragging the slider above',
+    addDpi: 'New Stage',
+    buttonsTitle: 'Button',
+    buttonsHint: 'Select a function for each physical button.',
+    performanceTitle: 'Performance',
+    reportRate: 'Report Rate',
+    reportRateDesc: 'Setting the frequency of communication between the mouse and the computer and increasing the polling rate can reduce latency, but increase some power consumption',
+    lod: 'LOD',
+    lodDesc: 'Sets the minimum working height of the sensor when the mouse is raised',
+    sensorOptions: 'Sensor correction',
+    motionSync: 'Motion sync',
+    motionSyncDesc: 'The sleek algorithm correction is carried out on the mouse movement, and the movement trajectory is more accurate',
+    angleSnap: 'Angle snapping',
+    angleSnapDesc: 'When the mouse moves in a straight line, the jitter is corrected and becomes an absolute straight line movement (it is not recommended to enable it in the game)',
+    ripple: 'Ripple control',
+    rippleDesc: 'Algorithm correction for high movement speed to eliminate wavy jitter (it is not recommended to enable it in the game)',
+    debounce: 'Debounce',
+    debounceDesc: 'If a double click occurs, set the debounce to 8ms or higher until there is no double click',
+    macroTitle: 'Macro',
+    macroHint: 'Select a macro slot, edit the key sequence (press/release + delay), then bind a button to it in "Button".',
+    loopType: 'Cycle',
+    loopHold: 'Cycle until the key is released',
+    loopAnyKey: 'Cycle until any key is pressed',
+    loopN: 'Cycle',
+    times: 'times',
+    press: 'Press',
+    release: 'Release',
+    addAction: '+ Add',
+    uploadMacro: 'Upload to mouse',
+    macroEmpty: 'No actions yet, add the first key below',
+    macroFull: 'Maximum actions reached (70)',
+    pressDir: '↓ Press',
+    releaseDir: '↑ Release',
+    lightingTitle: 'Lighting',
+    lightingHint: 'RGB lighting settings (coming soon).',
+    onboardConfig: 'Onboard:',
+    apply: 'Apply to mouse',
+    searching: 'Searching device...',
+    connecting: 'Connecting...',
+    readingConfig: 'Reading configuration...',
+    connectedWireless: 'Connected (Wireless)',
+    connectedWired: 'Connected (Wired)',
+    deviceNotFound: "If your device doesn't show up, plug it back in and try again",
+    connectFailed: 'Connect failed: ',
+    pleaseConnect: 'Please connect the mouse first',
+    applying: 'Applying...',
+    applied: '✓ Applied',
+    applyFailed: 'Apply failed: ',
+    uploading: 'Uploading...',
+    uploaded: '✓ Uploaded to mouse',
+    uploadFailed: 'Upload failed: ',
+    keyLeft: 'Left Button',
+    keyRight: 'Right Button',
+    keyMiddle: 'Middle Button',
+    keyBack: 'Backward',
+    keyForward: 'Forward',
+    keyDpi: 'DPI Loop',
+    typeSystem: 'System',
+    typeKeyboard: 'Keyboard',
+    typeMedia: 'Multimedia',
+    typeMacro: 'Macro',
+    removeDpi: 'Remove stage',
+    removeAction: 'Remove action',
+    delayMs: 'Delay(ms)',
+    macroPrefix: 'Macro ',
+    itemUnit: 'items',
+    menuFile: 'File',
+    menuQuit: 'Quit',
+    menuLanguage: 'Language',
+    menuHelp: 'Help',
+    menuAbout: 'About',
+    aboutText: 'Incott Mouse Driver — standalone desktop configuration tool',
+  },
+};
+
+let currentLang = 'zh';
+
+function setLang(lang) {
+  if (messages[lang]) currentLang = lang;
+  return currentLang;
+}
+
+function getLang() {
+  return currentLang;
+}
+
+function t(key) {
+  return messages[currentLang][key] ?? messages.zh[key] ?? key;
+}
+
+module.exports = { messages, setLang, getLang, t };

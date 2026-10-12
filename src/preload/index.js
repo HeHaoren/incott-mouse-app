@@ -5,6 +5,7 @@
 'use strict';
 
 const { contextBridge, ipcRenderer } = require('electron');
+const i18n = require('../shared/i18n');
 
 contextBridge.exposeInMainWorld('api', {
   /** 枚举匹配的 Incott 鼠标 */
@@ -33,4 +34,21 @@ contextBridge.exposeInMainWorld('api', {
 
   /** 上传宏到鼠标（编码 320 字节 + 分块上传） */
   uploadMacro: (macro) => ipcRenderer.invoke('mouse:uploadMacro', macro),
+});
+
+// i18n（渲染进程通过 window.i18n 使用）
+contextBridge.exposeInMainWorld('i18n', {
+  t: (key) => i18n.t(key),
+  getLang: () => i18n.getLang(),
+  setLang: (lang) => {
+    const l = i18n.setLang(lang);
+    ipcRenderer.invoke('i18n:setLang', l); // 同步主进程菜单
+    return l;
+  },
+  onLangChanged: (cb) => {
+    ipcRenderer.on('i18n:changed', (_e, lang) => {
+      i18n.setLang(lang);
+      cb(lang);
+    });
+  },
 });

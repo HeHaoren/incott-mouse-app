@@ -29,9 +29,29 @@ const state = {
 };
 
 const $ = (sel) => document.querySelector(sel);
+const t = (key) => window.i18n.t(key);
+
+/** 应用 i18n：替换所有带 data-i18n 属性的静态文案 */
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  // 语言按钮显示目标语言
+  const lang = window.i18n.getLang();
+  $('#langBtn').textContent = lang === 'zh' ? '中文' : 'English';
+}
+
+/** 切换语言 */
+function toggleLang() {
+  const next = window.i18n.getLang() === 'zh' ? 'en' : 'zh';
+  window.i18n.setLang(next);
+  applyI18n();
+  renderAll(); // 重新渲染动态文案
+}
 
 // ── 初始化 ────────────────────────────────────────────────
 async function init() {
+  applyI18n();
   bindEvents();
   try {
     state.constants = await window.api.getConstants();
@@ -45,6 +65,15 @@ async function init() {
 }
 
 function bindEvents() {
+  // 语言切换
+  $('#langBtn').addEventListener('click', toggleLang);
+  if (window.i18n.onLangChanged) {
+    window.i18n.onLangChanged(() => {
+      applyI18n();
+      renderAll();
+    });
+  }
+
   // 导航
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -105,20 +134,20 @@ async function onConnect() {
     return;
   }
   showSpinner();
-  setDeviceLabel('正在搜索设备…');
+  setDeviceLabel(t('searching'));
   try {
     const list = await window.api.listDevices();
     if (list.length === 0) {
       hideSpinner();
-      setDeviceLabel('您的设备如果没有显示，请重新拔插一下，然后重试', true);
+      setDeviceLabel(t('deviceNotFound'), true);
       return;
     }
-    setDeviceLabel('正在连接…');
+    setDeviceLabel(t('connecting'));
     const st = await window.api.openDevice(list[0].path);
     state.connected = st.opened;
     state.isWireless = st.isWireless;
     if (state.isWireless) state.maxDpi = state.constants.sensors.PAW3950.maxDpi;
-    setDeviceLabel('正在读取配置…');
+    setDeviceLabel(t('readingConfig'));
     renderDevice();
 
     // 读取鼠标实际的 DPI 档位配置（档位数 + 当前档位），对齐 UI
@@ -131,11 +160,11 @@ async function onConnect() {
       /* 读档位失败不阻塞连接 */
     }
     renderDpi();
-    setDeviceLabel(st.isWireless ? '已连接（无线）' : '已连接（有线）');
+    setDeviceLabel(st.isWireless ? t('connectedWireless') : t('connectedWired'));
     hideSpinner();
   } catch (e) {
     hideSpinner();
-    setDeviceLabel('连接失败：' + e.message, true);
+    setDeviceLabel(t('connectFailed') + e.message, true);
   }
 }
 
@@ -167,7 +196,7 @@ function setDeviceLabel(text, isErr = false) {
 
 function renderDevice() {
   $('#deviceStatus').className = 'status-dot ' + (state.connected ? 'on' : 'off');
-  $('#connectBtn').textContent = state.connected ? '断开' : '连接鼠标';
+  $('#connectBtn').textContent = state.connected ? t('disconnect') : t('connect');
   $('#applyBtn').disabled = !state.connected;
 }
 
@@ -218,7 +247,7 @@ function renderDpi() {
     const rm = document.createElement('button');
     rm.className = 'dpi-remove';
     rm.textContent = '✕';
-    rm.title = '删除档位';
+    rm.title = t('removeDpi');
     rm.addEventListener('click', () => onRemoveDpi(i));
 
     card.appendChild(idx);
@@ -347,12 +376,12 @@ function renderProfile() {
 }
 
 // ── 按键映射 ───────────────────────────────────────────────
-const BUTTON_NAMES = ['左键', '右键', '中键', '后退', '前进', 'DPI循环'];
+const BUTTON_NAMES_KEYS = ['keyLeft', 'keyRight', 'keyMiddle', 'keyBack', 'keyForward', 'keyDpi'];
 const BUTTON_TYPES = [
-  { id: 'mouse', label: '系统按键' },
-  { id: 'keyboard', label: '键盘按键' },
-  { id: 'media', label: '多媒体' },
-  { id: 'macro', label: '录制宏' },
+  { id: 'mouse', labelKey: 'typeSystem' },
+  { id: 'keyboard', labelKey: 'typeKeyboard' },
+  { id: 'media', labelKey: 'typeMedia' },
+  { id: 'macro', labelKey: 'typeMacro' },
 ];
 
 function renderButtons() {
@@ -364,16 +393,16 @@ function renderButtons() {
 
     const name = document.createElement('span');
     name.className = 'button-name';
-    name.textContent = BUTTON_NAMES[i] || `按键 ${i + 1}`;
+    name.textContent = t(BUTTON_NAMES_KEYS[i]);
 
     const typeSel = document.createElement('select');
     typeSel.className = 'button-select';
     typeSel.style.width = '120px';
-    BUTTON_TYPES.forEach((t) => {
+    BUTTON_TYPES.forEach((tt) => {
       const opt = document.createElement('option');
-      opt.value = t.id;
-      opt.textContent = t.label;
-      opt.selected = btn.type === t.id;
+      opt.value = tt.id;
+      opt.textContent = t(tt.labelKey);
+      opt.selected = btn.type === tt.id;
       typeSel.appendChild(opt);
     });
     typeSel.addEventListener('change', () => {
@@ -432,7 +461,7 @@ function buildButtonOptions(type, selectedValue) {
     for (let m = 0; m < 10; m++) {
       const opt = document.createElement('option');
       opt.value = String(m);
-      opt.textContent = `宏 ${m + 1}`;
+      opt.textContent = t('macroPrefix') + (m + 1);
       opt.selected = String(m) === selectedValue;
       frag.appendChild(opt);
     }
@@ -465,7 +494,7 @@ function renderMacro() {
       (i === state.currentMacro ? ' active' : '') +
       (m.items.length ? ' has-content' : '');
     btn.textContent = i + 1;
-    btn.title = m.items.length ? `${m.name}（${m.items.length} 项）` : m.name;
+    btn.title = m.items.length ? `${m.name}（${m.items.length} ${t('itemUnit')}）` : m.name;
     btn.addEventListener('click', () => {
       state.currentMacro = i;
       renderMacro();
@@ -486,7 +515,7 @@ function renderMacroItems(m) {
   if (m.items.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'macro-empty';
-    empty.textContent = '暂无动作，从下方添加第一个按键';
+    empty.textContent = t('macroEmpty');
     list.appendChild(empty);
     return;
   }
@@ -500,7 +529,7 @@ function renderMacroItems(m) {
 
     const dir = document.createElement('span');
     dir.className = 'macro-item-dir ' + (it.press ? 'press' : 'release');
-    dir.textContent = it.press ? '↓ 按下' : '↑ 释放';
+    dir.textContent = it.press ? t('pressDir') : t('releaseDir');
 
     const key = document.createElement('span');
     key.className = 'macro-item-key';
@@ -511,7 +540,7 @@ function renderMacroItems(m) {
     delayInput.min = 0;
     delayInput.max = 60000;
     delayInput.value = it.delay;
-    delayInput.title = '延迟(ms)';
+    delayInput.title = t('delayMs');
     delayInput.addEventListener('change', () => {
       it.delay = Math.max(0, parseInt(delayInput.value) || 0);
     });
@@ -522,7 +551,7 @@ function renderMacroItems(m) {
     const rm = document.createElement('button');
     rm.className = 'macro-item-remove';
     rm.textContent = '✕';
-    rm.title = '删除此动作';
+    rm.title = t('removeAction');
     rm.addEventListener('click', () => {
       m.items.splice(i, 1);
       renderMacro();
@@ -551,7 +580,7 @@ function onMacroAddItem() {
   const delay = Math.max(0, parseInt($('#macroDelay').value) || 0);
   const m = state.macros[state.currentMacro];
   if (m.items.length >= 70) {
-    flashMacroStatus('动作数已达上限（70）', true);
+    flashMacroStatus(t('macroFull'), true);
     return;
   }
   m.items.push({ press, keyCode, delay });
@@ -560,12 +589,12 @@ function onMacroAddItem() {
 
 async function onMacroUpload() {
   if (!state.connected) {
-    flashMacroStatus('请先连接鼠标', true);
+    flashMacroStatus(t('pleaseConnect'), true);
     return;
   }
   const m = state.macros[state.currentMacro];
   const status = $('#macroStatus');
-  status.textContent = '正在上传…';
+  status.textContent = t('uploading');
   status.className = 'apply-status';
   try {
     await window.api.uploadMacro({
@@ -574,11 +603,11 @@ async function onMacroUpload() {
       cycle: m.cycle,
       items: m.items.map((it) => ({ press: it.press, keyCode: it.keyCode, delay: it.delay })),
     });
-    status.textContent = '✓ 已上传到鼠标';
+    status.textContent = t('uploaded');
     status.className = 'apply-status ok';
     saveLocalConfig();
   } catch (e) {
-    status.textContent = '上传失败：' + e.message;
+    status.textContent = t('uploadFailed') + e.message;
     status.className = 'apply-status err';
   }
 }
@@ -593,21 +622,21 @@ function flashMacroStatus(text, isErr) {
 // ── 应用 ───────────────────────────────────────────────────
 async function onApply() {
   if (!state.connected) {
-    flashStatus('请先连接鼠标', true);
+    flashStatus(t('pleaseConnect'), true);
     return;
   }
   const status = $('#applyStatus');
-  status.textContent = '正在应用…';
+  status.textContent = t('applying');
   status.className = 'apply-status';
 
   try {
     const ops = buildApplyOps();
     await window.api.apply(ops);
-    status.textContent = '✓ 已应用';
+    status.textContent = t('applied');
     status.className = 'apply-status ok';
     saveLocalConfig();
   } catch (e) {
-    status.textContent = '应用失败：' + e.message;
+    status.textContent = t('applyFailed') + e.message;
     status.className = 'apply-status err';
   }
 }
@@ -708,7 +737,7 @@ function loadLocalConfig() {
   if (state.macros.length === 0) {
     state.macros = [];
     for (let s = 0; s < 10; s++) {
-      state.macros.push({ slot: s, name: `宏 ${s + 1}`, loopType: 2, cycle: 1, items: [] });
+      state.macros.push({ slot: s, name: t('macroPrefix') + (s + 1), loopType: 2, cycle: 1, items: [] });
     }
   }
 }
