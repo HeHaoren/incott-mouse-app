@@ -694,7 +694,7 @@ function flashStatus(text, isErr) {
 // ── 本地配置持久化 ─────────────────────────────────────────
 function loadLocalConfig() {
   try {
-    const saved = JSON.parse(localStorage.getItem('encott-config'));
+    const saved = JSON.parse(localStorage.getItem('incott-config'));
     if (saved) {
       if (Array.isArray(saved.dpiLevels) && saved.dpiLevels.length) state.dpiLevels = saved.dpiLevels;
       if (saved.currentDpi != null) state.currentDpi = saved.currentDpi;
@@ -743,7 +743,7 @@ function loadLocalConfig() {
 }
 
 function saveLocalConfig() {
-  localStorage.setItem('encott-config', JSON.stringify({
+  localStorage.setItem('incott-config', JSON.stringify({
     dpiLevels: state.dpiLevels,
     currentDpi: state.currentDpi,
     xySplit: state.xySplit,

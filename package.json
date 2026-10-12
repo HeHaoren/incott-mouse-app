@@ -1,9 +1,9 @@
 {
-  "name": "encott-mouse-app",
+  "name": "incott-mouse-app",
   "version": "0.1.0",
   "description": "Incott 鼠标驱动 - 独立的桌面配置工具（基于逆向的 HID 协议，不依赖网页驱动）",
   "main": "src/main/index.js",
-  "author": "Encott Dev",
+  "author": "Incott Dev",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -18,7 +18,7 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.encott.mouseapp",
+    "appId": "com.incott.mouseapp",
     "productName": "Incott Mouse Driver",
     "npmRebuild": false,
     "files": [
