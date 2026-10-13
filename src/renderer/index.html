@@ -17,7 +17,13 @@
       <span id="deviceStatus" class="status-dot off"></span>
       <span id="deviceSpinner" class="spinner hidden"></span>
       <span id="deviceLabel" class="device-label" data-i18n="notConnected">未连接设备</span>
-      <button id="langBtn" class="btn btn-ghost" title="Language">中文</button>
+      <div class="lang-wrap">
+        <button id="langBtn" class="btn btn-ghost lang-btn" title="Language">🌐</button>
+        <div id="langMenu" class="lang-menu hidden">
+          <button class="lang-option" data-lang="zh">中文</button>
+          <button class="lang-option" data-lang="en">English</button>
+        </div>
+      </div>
       <button id="connectBtn" class="btn btn-primary" data-i18n="connect">连接鼠标</button>
     </div>
   </header>
