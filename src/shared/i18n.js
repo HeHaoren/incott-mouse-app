@@ -95,6 +95,7 @@ const messages = {
     delayMs: '延迟(ms)',
     macroPrefix: '宏 ',
     itemUnit: '项',
+    dpiInputHint: '输入 50 的倍数，回车保存',
     // 菜单
     menuFile: '文件',
     menuQuit: '退出',
@@ -182,6 +183,7 @@ const messages = {
     delayMs: 'Delay(ms)',
     macroPrefix: 'Macro ',
     itemUnit: 'items',
+    dpiInputHint: 'Enter a multiple of 50, press Enter to save',
     menuFile: 'File',
     menuQuit: 'Quit',
     menuLanguage: 'Language',

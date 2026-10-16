@@ -272,7 +272,8 @@ function renderDpi() {
     card.appendChild(color);
     card.appendChild(rm);
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.dpi-remove') || e.target.closest('.dpi-color')) return;
+      if (e.target.closest('.dpi-remove') || e.target.closest('.dpi-color') ||
+          e.target.closest('.dpi-value-input') || e.target.closest('.dpi-slider')) return;
       state.currentDpi = i;
       renderDpi();
     });
@@ -299,6 +300,7 @@ function dpiRow(label, dpiIndex, axis, color) {
   input.max = state.maxDpi;
   input.step = 50;
   input.value = state.dpiLevels[dpiIndex][axis];
+  input.title = t('dpiInputHint');
 
   const applyInput = () => {
     let v = parseInt(input.value);
