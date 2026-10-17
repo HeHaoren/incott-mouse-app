@@ -239,7 +239,7 @@ function buildReadDpiLevel() {
   return cmd(131);
 }
 function buildReadBattery() {
-  return cmd(133, 3);
+  return cmd(0x89); // 读接收器完整状态（电量在响应 buf[1]，见 anuonie 协议）
 }
 function buildReadKey(index) {
   return cmd(134, index);

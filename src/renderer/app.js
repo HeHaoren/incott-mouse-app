@@ -167,7 +167,8 @@ async function onConnect() {
       return;
     }
     setDeviceLabel(t('connecting'));
-    const st = await window.api.openDevice(list[0].path);
+    // 不传 path：让主进程自动选可通信的 Col02 接口（插线时存在 Col01/Col02 两个接口）
+    const st = await window.api.openDevice();
     state.connected = st.opened;
     state.isWireless = st.isWireless;
     if (state.isWireless) state.maxDpi = state.constants.sensors.PAW3950.maxDpi;
@@ -247,7 +248,11 @@ function renderBattery() {
   el.classList.remove('hidden');
   el.title = t('batteryHint');
   $('#batteryVal').textContent = state.battery;
-  el.classList.toggle('low', state.battery <= 20);
+  // 三段颜色：>60 绿，25~60 黄，≤25 红（对齐官方驱动的电量显示规则）
+  el.classList.remove('high', 'mid', 'low');
+  if (state.battery > 60) el.classList.add('high');
+  else if (state.battery > 25) el.classList.add('mid');
+  else el.classList.add('low');
 }
 
 // ── DPI ───────────────────────────────────────────────────

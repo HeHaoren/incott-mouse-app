@@ -163,7 +163,11 @@ class MouseDevice {
 }
 
 /**
- * 打开设备（按 path，或自动选第一个匹配设备）。
+ * 打开设备（按 path，或自动选可通信的接口）。
+ *
+ * 多接口场景：插线充电时 0xFF05 会出现 Col01/Col02 两个接口，
+ * Col01 发送 Feature Report 会失败（返回错误数据），必须用 Col02。
+ * 这里逐个尝试（Col02 优先，即枚举靠后的接口），选第一个能通信的。
  */
 function openDevice(path) {
   if (path) {
@@ -173,7 +177,18 @@ function openDevice(path) {
   if (list.length === 0) {
     throw new Error('未找到 Incott 鼠标（VID 0x093A）');
   }
-  return new MouseDevice(list[0].path);
+  let lastErr = null;
+  for (const d of [...list].reverse()) {
+    try {
+      const dev = new MouseDevice(d.path);
+      // 探测通信：Col01 在此抛错（HidD_SetFeature 失败）
+      dev.sendFeatureReport(P.buildReadBattery());
+      return dev;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('所有接口均无法通信');
 }
 
 module.exports = {

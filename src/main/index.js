@@ -70,7 +70,11 @@ const READ_ACTIONS = {
   },
   battery: {
     build: () => P.buildReadBattery(),
-    parse: (buf) => ((buf[3] << 8) | buf[2]),
+    // 响应（剥离 reportId 后）：buf[0]=0x89 回显, buf[1]=电量百分比(>100 表示充电, 减128)
+    parse: (buf) => {
+      const raw = buf[1];
+      return raw > 100 ? raw - 128 : raw;
+    },
   },
   key: {
     build: (index) => P.buildReadKey(index),

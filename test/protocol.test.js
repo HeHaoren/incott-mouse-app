@@ -116,7 +116,7 @@ test('宏编码：320 字节结构', () => {
 
 test('读取命令构造', () => {
   assert.deepEqual([...P.buildReadDpiLevel()], [131, 0, 0, 0, 0, 0, 0, 0]);
-  assert.deepEqual([...P.buildReadBattery()], [133, 3, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildReadBattery()], [137, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildReadKey(5)], [134, 5, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildReadMatchInfo()], [142, 1, 0, 0, 0, 0, 0, 0]);
 });

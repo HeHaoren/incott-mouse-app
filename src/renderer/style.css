@@ -61,6 +61,8 @@ body {
   cursor: pointer; user-select: none;
 }
 .battery:hover { color: var(--text); }
+.battery.high { color: var(--green); }
+.battery.mid { color: #e6aa14; }
 .battery.low { color: var(--red); }
 .battery-icon { font-size: 12px; }
 
