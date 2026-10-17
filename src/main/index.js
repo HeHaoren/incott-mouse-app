@@ -145,9 +145,14 @@ function registerIpc() {
     if (!device) throw new Error('设备未连接，请先连接鼠标');
     const def = READ_ACTIONS[readType];
     if (!def) throw new Error(`未知读取: ${readType}`);
-    device.sendFeatureReport(def.build(...args));
+    const cmdBytes = def.build(...args);
+    device.sendFeatureReport(cmdBytes);
     await sleep(50);
     const buf = device.getFeatureReport(P.REPORT_DATA_LEN);
+    // 设备休眠/无响应时返回全 0（buf[0] 无命令回显），视为无效读取，避免解析出错误值
+    if (buf[0] !== cmdBytes[0]) {
+      throw new Error('设备未响应（可能处于休眠状态）');
+    }
     return def.parse(buf);
   });
 

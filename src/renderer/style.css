@@ -54,6 +54,16 @@ body {
 .status-dot.off { background: #3d444d; }
 .device-label { font-size: 13px; color: var(--text-dim); }
 
+/* 电量显示 */
+.battery {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; color: var(--text-dim);
+  cursor: pointer; user-select: none;
+}
+.battery:hover { color: var(--text); }
+.battery.low { color: var(--red); }
+.battery-icon { font-size: 12px; }
+
 /* 加载转圈动画 */
 .spinner {
   width: 14px; height: 14px; flex-shrink: 0;

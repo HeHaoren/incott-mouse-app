@@ -17,6 +17,9 @@
       <span id="deviceStatus" class="status-dot off"></span>
       <span id="deviceSpinner" class="spinner hidden"></span>
       <span id="deviceLabel" class="device-label" data-i18n="notConnected">未连接设备</span>
+      <span id="battery" class="battery hidden">
+        <span class="battery-icon">🔋</span><span id="batteryVal">--</span>%
+      </span>
       <div class="lang-wrap">
         <button id="langBtn" class="btn btn-ghost lang-btn" title="Language">🌐</button>
         <div id="langMenu" class="lang-menu hidden">
@@ -105,6 +108,18 @@
             <h3 data-i18n="debounce">按键响应时间设置</h3>
             <input type="number" id="debounce" min="0" max="30" value="8" class="num-input" />
             <div class="opt-desc" data-i18n="debounceDesc">如果出现双击，请将按键延时调到8ms或更高直至没有双击</div>
+          </div>
+          <div class="perf-card">
+            <h3 data-i18n="sleepTime">休眠时间</h3>
+            <select id="sleepTime" class="button-select">
+              <option value="10">10s</option>
+              <option value="30">30s</option>
+              <option value="60">1m</option>
+              <option value="300">5m</option>
+              <option value="600">10m</option>
+              <option value="1800">30m</option>
+            </select>
+            <div class="opt-desc" data-i18n="sleepTimeDesc">鼠标无操作该时长后进入休眠（低功耗）模式</div>
           </div>
         </div>
       </section>

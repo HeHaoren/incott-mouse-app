@@ -11,6 +11,7 @@
 const state = {
   connected: false,
   isWireless: false,
+  battery: null,
   constants: null,
   maxDpi: 32000,
   dpiLevels: [], // [{ x, y, color }]
@@ -22,6 +23,7 @@ const state = {
   angleSnap: false,
   motionSync: false,
   debounce: 8,
+  sleepTime: 600,
   profile: 0,
   buttons: [], // [{ type: 'mouse'|'keyboard'|'media'|'macro', value }]
   macros: [], // [{ slot, name, loopType, cycle, items: [{press, keyCode, delay}] }]
@@ -98,6 +100,7 @@ function bindEvents() {
 
   // 连接
   $('#connectBtn').addEventListener('click', onConnect);
+  $('#battery').addEventListener('click', refreshBattery);
   $('#applyBtn').addEventListener('click', onApply);
   $('#addDpiBtn').addEventListener('click', onAddDpi);
   $('#xySplit').addEventListener('change', (e) => {
@@ -115,6 +118,9 @@ function bindEvents() {
   $('#motionSync').addEventListener('change', (e) => (state.motionSync = e.target.checked));
   $('#debounce').addEventListener('change', (e) => {
     state.debounce = clamp(parseInt(e.target.value) || 0, 0, 30);
+  });
+  $('#sleepTime').addEventListener('change', (e) => {
+    state.sleepTime = parseInt(e.target.value, 10) || 600;
   });
 
   // Profile
@@ -147,6 +153,7 @@ async function onConnect() {
   if (state.connected) {
     await window.api.closeDevice();
     state.connected = false;
+    state.battery = null;
     renderDevice();
     return;
   }
@@ -177,6 +184,7 @@ async function onConnect() {
       /* 读档位失败不阻塞连接 */
     }
     renderDpi();
+    if (st.isWireless) await refreshBattery();
     setDeviceLabel(st.isWireless ? t('connectedWireless') : t('connectedWired'));
     hideSpinner();
   } catch (e) {
@@ -215,6 +223,31 @@ function renderDevice() {
   $('#deviceStatus').className = 'status-dot ' + (state.connected ? 'on' : 'off');
   $('#connectBtn').textContent = state.connected ? t('disconnect') : t('connect');
   $('#applyBtn').disabled = !state.connected;
+  renderBattery();
+}
+
+// ── 电量 ───────────────────────────────────────────────────
+async function refreshBattery() {
+  if (!state.connected || !state.isWireless) return;
+  try {
+    const val = await window.api.read('battery');
+    state.battery = val;
+    renderBattery();
+  } catch (_) {
+    /* 读电量失败静默（保留上次值） */
+  }
+}
+
+function renderBattery() {
+  const el = $('#battery');
+  if (!state.connected || !state.isWireless || state.battery == null) {
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  el.title = t('batteryHint');
+  $('#batteryVal').textContent = state.battery;
+  el.classList.toggle('low', state.battery <= 20);
 }
 
 // ── DPI ───────────────────────────────────────────────────
@@ -693,6 +726,9 @@ function buildApplyOps() {
   // 去抖
   ops.push({ action: 'setDebounce', args: [state.debounce] });
 
+  // 休眠时间
+  ops.push({ action: 'setSleepTime', args: [state.sleepTime] });
+
   // Profile
   ops.push({ action: 'setProfile', args: [state.profile] });
 
@@ -724,6 +760,7 @@ function loadLocalConfig() {
       if (saved.angleSnap != null) state.angleSnap = saved.angleSnap;
       if (saved.motionSync != null) state.motionSync = saved.motionSync;
       if (saved.debounce != null) state.debounce = saved.debounce;
+      if (saved.sleepTime != null) state.sleepTime = saved.sleepTime;
       if (saved.profile != null) state.profile = saved.profile;
       if (Array.isArray(saved.buttons)) state.buttons = saved.buttons;
       if (Array.isArray(saved.macros)) state.macros = saved.macros;
@@ -772,6 +809,7 @@ function saveLocalConfig() {
     angleSnap: state.angleSnap,
     motionSync: state.motionSync,
     debounce: state.debounce,
+    sleepTime: state.sleepTime,
     profile: state.profile,
     buttons: state.buttons,
     macros: state.macros,
@@ -793,6 +831,7 @@ function renderAll() {
   $('#angleSnap').checked = state.angleSnap;
   $('#motionSync').checked = state.motionSync;
   $('#debounce').value = state.debounce;
+  $('#sleepTime').value = state.sleepTime;
 }
 
 function clamp(v, min, max) {

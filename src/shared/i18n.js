@@ -42,6 +42,8 @@ const messages = {
     rippleDesc: '对高移速情况下进行算法修正，消除波浪形抖动（游戏中不建议开启）',
     debounce: '按键响应时间设置',
     debounceDesc: '如果出现双击，请将按键延时调到8ms或更高直至没有双击',
+    sleepTime: '休眠时间',
+    sleepTimeDesc: '鼠标无操作该时长后进入休眠（低功耗）模式',
     // 宏
     macroTitle: '录制宏',
     macroHint: '选择宏槽位，编辑按键序列（按下/释放 + 延迟），上传后可在「键位设置」里把某个按键绑定为宏。',
@@ -96,6 +98,7 @@ const messages = {
     macroPrefix: '宏 ',
     itemUnit: '项',
     dpiInputHint: '输入 50 的倍数，回车保存',
+    batteryHint: '点击刷新电量',
     // 菜单
     menuFile: '文件',
     menuQuit: '退出',
@@ -135,6 +138,8 @@ const messages = {
     rippleDesc: 'Algorithm correction for high movement speed to eliminate wavy jitter (it is not recommended to enable it in the game)',
     debounce: 'Debounce',
     debounceDesc: 'If a double click occurs, set the debounce to 8ms or higher until there is no double click',
+    sleepTime: 'Sleep time',
+    sleepTimeDesc: 'The mouse enters sleep (low-power) mode after being idle for this long',
     macroTitle: 'Macro',
     macroHint: 'Select a macro slot, edit the key sequence (press/release + delay), then bind a button to it in "Button".',
     loopType: 'Cycle',
@@ -184,6 +189,7 @@ const messages = {
     macroPrefix: 'Macro ',
     itemUnit: 'items',
     dpiInputHint: 'Enter a multiple of 50, press Enter to save',
+    batteryHint: 'Click to refresh battery',
     menuFile: 'File',
     menuQuit: 'Quit',
     menuLanguage: 'Language',
