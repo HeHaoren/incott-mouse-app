@@ -185,7 +185,7 @@ async function onConnect() {
       /* 读档位失败不阻塞连接 */
     }
     renderDpi();
-    if (st.isWireless) await refreshBattery();
+    await refreshBattery();
     setDeviceLabel(st.isWireless ? t('connectedWireless') : t('connectedWired'));
     hideSpinner();
   } catch (e) {
@@ -229,7 +229,7 @@ function renderDevice() {
 
 // ── 电量 ───────────────────────────────────────────────────
 async function refreshBattery() {
-  if (!state.connected || !state.isWireless) return;
+  if (!state.connected) return;
   try {
     const val = await window.api.read('battery');
     state.battery = val;
@@ -241,7 +241,7 @@ async function refreshBattery() {
 
 function renderBattery() {
   const el = $('#battery');
-  if (!state.connected || !state.isWireless || state.battery == null) {
+  if (!state.connected || state.battery == null) {
     el.classList.add('hidden');
     return;
   }
