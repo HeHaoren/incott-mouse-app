@@ -102,6 +102,8 @@ const messages = {
     // 菜单
     menuFile: '文件',
     menuQuit: '退出',
+    trayOpen: '打开界面',
+    batteryLabel: '电量',
     menuLanguage: '语言',
     menuHelp: '帮助',
     menuAbout: '关于',
@@ -192,6 +194,8 @@ const messages = {
     batteryHint: 'Click to refresh battery',
     menuFile: 'File',
     menuQuit: 'Quit',
+    trayOpen: 'Open',
+    batteryLabel: 'Battery',
     menuLanguage: 'Language',
     menuHelp: 'Help',
     menuAbout: 'About',

@@ -12,13 +12,18 @@
 'use strict';
 
 const path = require('path');
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const hid = require('./hid');
 const P = require('../shared/protocol');
 const i18n = require('../shared/i18n');
 
 let device = null; // 当前打开的 MouseDevice
 let mainWindow = null;
+let tray = null; // 托盘图标
+let batteryLevel = null; // 最近一次读到的电量（托盘显示）
+let quitting = false; // 是否真正退出（关窗仅隐藏到托盘）
+let batteryTimer = null; // 电量轮询定时器
+let writing = false; // 写操作进行中（轮询读电量时跳过，避免打断 apply/宏上传序列）
 
 // ── 操作分发表：action → 命令构造器 ──────────────────────────
 const EXEC_ACTIONS = {
@@ -141,8 +146,13 @@ function registerIpc() {
     const builder = EXEC_ACTIONS[action];
     if (!builder) throw new Error(`未知操作: ${action}`);
     const cmdBytes = builder(...args);
-    device.sendFeatureReport(cmdBytes);
-    return true;
+    writing = true;
+    try {
+      device.sendFeatureReport(cmdBytes);
+      return true;
+    } finally {
+      writing = false;
+    }
   });
 
   ipcMain.handle('mouse:read', async (_e, readType, ...args) => {
@@ -163,14 +173,19 @@ function registerIpc() {
   // 批量应用：按协议 apply 流程顺序执行一组操作（带间隔）
   ipcMain.handle('mouse:apply', async (_e, ops) => {
     if (!device) throw new Error('设备未连接，请先连接鼠标');
-    for (const op of ops) {
-      const { action, args = [] } = op;
-      const builder = EXEC_ACTIONS[action];
-      if (!builder) throw new Error(`未知操作: ${action}`);
-      device.sendFeatureReport(builder(...args));
-      await sleep(op.delay ?? 200);
+    writing = true;
+    try {
+      for (const op of ops) {
+        const { action, args = [] } = op;
+        const builder = EXEC_ACTIONS[action];
+        if (!builder) throw new Error(`未知操作: ${action}`);
+        device.sendFeatureReport(builder(...args));
+        await sleep(op.delay ?? 200);
+      }
+      return true;
+    } finally {
+      writing = false;
     }
-    return true;
   });
 
   // 宏上传：编码 320 字节后分 10 块，每块 feature report 准备 + output report 传数据
@@ -182,19 +197,25 @@ function registerIpc() {
     if (macro.uid == null) macro.uid = Date.now() >>> 0;
     const bytes = P.encodeMacro(macro);
     const slot = macro.slot & 0xff;
-    for (let i = 0; i < 10; i++) {
-      device.sendFeatureReport(P.buildMacroBlock(10, i, slot));
-      await sleep(80);
-      device.sendReport(bytes.slice(i * 32, i * 32 + 32));
-      await sleep(80);
+    writing = true;
+    try {
+      for (let i = 0; i < 10; i++) {
+        device.sendFeatureReport(P.buildMacroBlock(10, i, slot));
+        await sleep(80);
+        device.sendReport(bytes.slice(i * 32, i * 32 + 32));
+        await sleep(80);
+      }
+      return true;
+    } finally {
+      writing = false;
     }
-    return true;
   });
 
   // 语言切换：同步主进程菜单
   ipcMain.handle('i18n:setLang', (_e, lang) => {
     i18n.setLang(lang);
     buildMenu();
+    if (tray) tray.setContextMenu(buildTrayMenu());
     return i18n.getLang();
   });
 }
@@ -229,6 +250,69 @@ function broadcastLang(lang) {
   if (mainWindow) mainWindow.webContents.send('i18n:changed', lang);
 }
 
+// ── 托盘与后台轮询 ─────────────────────────────────────────
+function createTrayIcon() {
+  // 生成 16x16 蓝色圆点托盘图标（呼应顶栏 brand-dot）
+  const size = 16;
+  const buf = Buffer.alloc(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d <= 6) {
+        const idx = (y * size + x) * 4;
+        buf[idx] = 0x4d; buf[idx + 1] = 0xa3; buf[idx + 2] = 0xff; buf[idx + 3] = 0xff;
+      }
+    }
+  }
+  return nativeImage.createFromBitmap(buf, { width: size, height: size });
+}
+
+function showMainWindow() {
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  } else {
+    createWindow();
+  }
+}
+
+function buildTrayMenu() {
+  const t = i18n.t;
+  const items = [{ label: t('trayOpen'), click: () => showMainWindow() }];
+  if (batteryLevel != null) {
+    items.push({ label: `${t('batteryLabel')}: ${batteryLevel}%`, enabled: false });
+  }
+  items.push({ type: 'separator' });
+  items.push({ label: t('menuQuit'), click: () => { quitting = true; app.quit(); } });
+  return Menu.buildFromTemplate(items);
+}
+
+function updateTrayBattery(battery) {
+  batteryLevel = battery;
+  if (!tray) return;
+  tray.setToolTip(`Incott Mouse Driver — ${i18n.t('batteryLabel')} ${battery}%`);
+  tray.setContextMenu(buildTrayMenu());
+}
+
+async function pollBattery() {
+  if (!device || writing) return; // 未连接或正在写，跳过本次
+  try {
+    device.sendFeatureReport(P.buildReadBattery());
+    await sleep(50);
+    const buf = device.getFeatureReport(P.REPORT_DATA_LEN);
+    if (buf[0] !== 0x89) return; // 休眠/无响应，忽略本次
+    const raw = buf[1];
+    updateTrayBattery(raw > 100 ? raw - 128 : raw);
+  } catch (_) {
+    /* 设备拔出/休眠，忽略本次，下次重试 */
+  }
+}
+
+function startBatteryPolling() {
+  if (batteryTimer) return;
+  batteryTimer = setInterval(pollBattery, 60000);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 960,
@@ -246,6 +330,12 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  mainWindow.on('close', (e) => {
+    if (!quitting) {
+      e.preventDefault();
+      mainWindow.hide(); // 关窗隐藏到托盘，不退出
+    }
+  });
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -256,13 +346,23 @@ app.whenReady().then(() => {
   createWindow();
   buildMenu(); // 应用菜单（中英文）
   hid.prewarm(); // 后台预枚举设备（不阻塞，连接时秒开）
+  tray = new Tray(createTrayIcon());
+  tray.setToolTip('Incott Mouse Driver');
+  tray.setContextMenu(buildTrayMenu());
+  startBatteryPolling();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-app.on('window-all-closed', () => {
+app.on('before-quit', () => {
+  quitting = true;
   if (device) device.close();
   device = null;
-  if (process.platform !== 'darwin') app.quit();
+  if (batteryTimer) clearInterval(batteryTimer);
+  batteryTimer = null;
+});
+
+app.on('window-all-closed', () => {
+  // 关窗仅隐藏到托盘（见 close 拦截），不退出；真正退出走托盘「退出」/应用菜单 quit
 });
