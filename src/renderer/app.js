@@ -50,6 +50,31 @@ function toggleLangMenu() {
   $('#langMenu').classList.toggle('hidden');
 }
 
+/** 展开/收起设置面板 */
+function toggleSettingsMenu() {
+  $('#settingsMenu').classList.toggle('hidden');
+}
+
+/** 更新设置项（开机自启 / 启动后台保留） */
+async function onSettingChange(patch) {
+  try {
+    await window.api.setSettings(patch);
+  } catch (_) {
+    /* 设置失败静默 */
+  }
+}
+
+/** 读取设置并回填开关 */
+async function loadSettings() {
+  try {
+    const s = await window.api.getSettings();
+    $('#setAutoLaunch').checked = !!s.autoLaunch;
+    $('#setStartMinimized').checked = !!s.startMinimized;
+  } catch (_) {
+    /* 读设置失败静默 */
+  }
+}
+
 /** 选择语言 */
 function selectLang(lang) {
   $('#langMenu').classList.add('hidden');
@@ -70,6 +95,7 @@ async function init() {
     state.constants = null;
   }
   loadLocalConfig();
+  loadSettings();
   renderAll();
   refreshDeviceState();
 }
@@ -80,10 +106,17 @@ function bindEvents() {
   document.querySelectorAll('.lang-option').forEach((opt) => {
     opt.addEventListener('click', () => selectLang(opt.dataset.lang));
   });
-  // 点击别处关闭语言菜单
+  // 设置面板
+  $('#settingsBtn').addEventListener('click', toggleSettingsMenu);
+  $('#setAutoLaunch').addEventListener('change', (e) => onSettingChange({ autoLaunch: e.target.checked }));
+  $('#setStartMinimized').addEventListener('change', (e) => onSettingChange({ startMinimized: e.target.checked }));
+  // 点击别处关闭语言/设置菜单
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.lang-wrap')) {
       $('#langMenu').classList.add('hidden');
+    }
+    if (!e.target.closest('.settings-wrap')) {
+      $('#settingsMenu').classList.add('hidden');
     }
   });
   if (window.i18n.onLangChanged) {

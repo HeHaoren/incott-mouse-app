@@ -12,6 +12,7 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const hid = require('./hid');
 const P = require('../shared/protocol');
@@ -24,6 +25,42 @@ let batteryLevel = null; // 最近一次读到的电量（托盘显示）
 let quitting = false; // 是否真正退出（关窗仅隐藏到托盘）
 let batteryTimer = null; // 电量轮询定时器
 let writing = false; // 写操作进行中（轮询读电量时跳过，避免打断 apply/宏上传序列）
+
+// ── 设置（JSON 持久化到 userData）──────────────────────────
+function settingsFile() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function loadSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveSettings(s) {
+  fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+}
+
+function getSettings() {
+  return {
+    autoLaunch: !!app.getLoginItemSettings().openAtLogin,
+    startMinimized: !!loadSettings().startMinimized,
+  };
+}
+
+function setSettings(patch) {
+  const s = loadSettings();
+  if (patch.autoLaunch != null) {
+    app.setLoginItemSettings({ openAtLogin: !!patch.autoLaunch });
+  }
+  if (patch.startMinimized != null) {
+    s.startMinimized = !!patch.startMinimized;
+  }
+  saveSettings(s);
+  return getSettings();
+}
 
 // ── 操作分发表：action → 命令构造器 ──────────────────────────
 const EXEC_ACTIONS = {
@@ -218,6 +255,10 @@ function registerIpc() {
     if (tray) tray.setContextMenu(buildTrayMenu());
     return i18n.getLang();
   });
+
+  // 设置（开机自启 / 启动后台保留）
+  ipcMain.handle('settings:get', () => getSettings());
+  ipcMain.handle('settings:set', (_e, patch) => setSettings(patch || {}));
 }
 
 /** 构建应用菜单（随语言切换重建） */
@@ -344,6 +385,9 @@ function createWindow() {
 app.whenReady().then(() => {
   registerIpc();
   createWindow();
+  if (loadSettings().startMinimized) {
+    mainWindow.hide(); // 启动后台保留：不显示主窗口，仅托盘常驻
+  }
   buildMenu(); // 应用菜单（中英文）
   hid.prewarm(); // 后台预枚举设备（不阻塞，连接时秒开）
   tray = new Tray(createTrayIcon());

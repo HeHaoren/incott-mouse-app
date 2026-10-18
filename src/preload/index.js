@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('api', {
 
   /** 上传宏到鼠标（编码 320 字节 + 分块上传） */
   uploadMacro: (macro) => ipcRenderer.invoke('mouse:uploadMacro', macro),
+
+  /** 读取设置（开机自启 / 启动后台保留） */
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+
+  /** 更新设置 */
+  setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
 });
 
 // i18n（渲染进程通过 window.i18n 使用）

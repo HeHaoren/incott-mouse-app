@@ -20,6 +20,19 @@
       <span id="battery" class="battery hidden">
         <span class="battery-icon">🔋</span><span id="batteryVal">--</span>%
       </span>
+      <div class="settings-wrap">
+        <button id="settingsBtn" class="btn btn-ghost" title="设置">⚙</button>
+        <div id="settingsMenu" class="settings-menu hidden">
+          <label class="settings-item">
+            <input type="checkbox" id="setAutoLaunch" />
+            <span data-i18n="settingsAutoLaunch">开机自启</span>
+          </label>
+          <label class="settings-item">
+            <input type="checkbox" id="setStartMinimized" />
+            <span data-i18n="settingsStartMinimized">启动后后台保留</span>
+          </label>
+        </div>
+      </div>
       <div class="lang-wrap">
         <button id="langBtn" class="btn btn-ghost lang-btn" title="Language">🌐</button>
         <div id="langMenu" class="lang-menu hidden">

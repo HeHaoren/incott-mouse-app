@@ -96,6 +96,25 @@ body {
 .lang-option:hover { background: var(--bg-card); color: var(--text); }
 .lang-option.active { background: var(--accent-soft); color: var(--accent); }
 
+/* 设置面板 */
+.settings-wrap { position: relative; }
+.settings-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 100;
+  min-width: 180px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+}
+.settings-menu.hidden { display: none; }
+.settings-item {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--text-dim); font-family: var(--font); font-size: 13px;
+  padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.settings-item:hover { background: var(--bg-card); color: var(--text); }
+.settings-item input { accent-color: var(--accent); }
+
 /* ── 按钮 ─────────────────────────── */
 .btn {
   border: none; cursor: pointer; font-family: var(--font);
