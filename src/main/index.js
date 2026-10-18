@@ -130,6 +130,43 @@ const READ_ACTIONS = {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// ── 电量读取（电压换算）────────────────────────────────────
+/**
+ * 锂电池电压（mV）→ 电量百分比（分段线性，标称 3.7V 单节锂电）。
+ * 0x89 响应的 buf[2]（原「电量」字段）实测为充电进度而非电量——无线时恒 0、
+ * 插线充电时恒 99，无法反映真实电量。改用电压实测值换算（物理量，可靠）。
+ */
+function voltageToPercent(mv) {
+  if (!mv || mv <= 3300) return 0;
+  if (mv >= 4200) return 100;
+  const curve = [
+    [4200, 100], [4100, 90], [4000, 78], [3900, 65],
+    [3800, 50], [3700, 32], [3600, 15], [3500, 5], [3300, 0],
+  ];
+  for (let i = 0; i < curve.length - 1; i++) {
+    const [v1, p1] = curve[i];
+    const [v2, p2] = curve[i + 1];
+    if (mv <= v1 && mv >= v2) {
+      return Math.round(p1 + (p2 - p1) * (mv - v1) / (v2 - v1));
+    }
+  }
+  return 0;
+}
+
+/**
+ * 读一次电量（百分比）。读完整 63 字节（剥离 reportId 后），
+ * 电压在原始响应 idx60-61（小端）→ 剥离后 buf[59..60]。
+ */
+async function readBatteryValue() {
+  if (!device) return null;
+  device.sendFeatureReport(P.buildReadBattery());
+  await sleep(50);
+  const buf = device.getFeatureReport(63);
+  if (buf[0] !== 0x89) return null;
+  const mv = (buf[60] << 8) | buf[59];
+  return voltageToPercent(mv);
+}
+
 function deviceState() {
   return device
     ? {
@@ -194,6 +231,11 @@ function registerIpc() {
 
   ipcMain.handle('mouse:read', async (_e, readType, ...args) => {
     if (!device) throw new Error('设备未连接，请先连接鼠标');
+    if (readType === 'battery') {
+      const val = await readBatteryValue();
+      if (val == null) throw new Error('设备未响应（可能处于休眠状态）');
+      return val;
+    }
     const def = READ_ACTIONS[readType];
     if (!def) throw new Error(`未知读取: ${readType}`);
     const cmdBytes = def.build(...args);
@@ -338,12 +380,8 @@ function updateTrayBattery(battery) {
 async function pollBattery() {
   if (!device || writing) return; // 未连接或正在写，跳过本次
   try {
-    device.sendFeatureReport(P.buildReadBattery());
-    await sleep(50);
-    const buf = device.getFeatureReport(P.REPORT_DATA_LEN);
-    if (buf[0] !== 0x89) return; // 休眠/无响应，忽略本次
-    const raw = buf[1];
-    updateTrayBattery(raw > 100 ? raw - 128 : raw);
+    const val = await readBatteryValue();
+    if (val != null) updateTrayBattery(val);
   } catch (_) {
     /* 设备拔出/休眠，忽略本次，下次重试 */
   }
