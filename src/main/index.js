@@ -205,6 +205,7 @@ function registerIpc() {
   ipcMain.handle('mouse:open', (_e, pathArg) => {
     if (device) device.close();
     device = hid.openDevice(pathArg);
+    pollBattery(); // 连接后立即读一次电量更新托盘（不等 60s 轮询）
     return deviceState();
   });
 

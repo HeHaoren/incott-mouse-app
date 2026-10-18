@@ -96,6 +96,7 @@ async function init() {
   }
   loadLocalConfig();
   loadSettings();
+  startBatteryAutoRefresh();
   renderAll();
   refreshDeviceState();
 }
@@ -261,6 +262,16 @@ function renderDevice() {
 }
 
 // ── 电量 ───────────────────────────────────────────────────
+let batteryRefreshTimer = null;
+
+/** 启动电量定时自动刷新（每 60s，仅在连接时读取） */
+function startBatteryAutoRefresh() {
+  if (batteryRefreshTimer) return;
+  batteryRefreshTimer = setInterval(() => {
+    if (state.connected) refreshBattery();
+  }, 60000);
+}
+
 async function refreshBattery() {
   if (!state.connected) return;
   try {
