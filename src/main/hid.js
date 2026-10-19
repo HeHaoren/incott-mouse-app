@@ -62,11 +62,18 @@ function listDevicesAsync() {
   if (deviceCache) return Promise.resolve(deviceCache);
   if (enumeratePromise) return enumeratePromise;
 
+  // 打包后 Electron 把 node-hid 放进 app.asar(.unpacked)，Worker eval 内部的
+  // require('node-hid') 无法从 asar 解析模块，必须传入主进程解析好的绝对路径。
+  let nodeHidPath = 'node-hid';
+  try {
+    nodeHidPath = require.resolve('node-hid');
+  } catch (_) { /* 开发/异常时 fallback 到裸模块名 */ }
+
   enumeratePromise = new Promise((resolve, reject) => {
     const workerSrc = `
-      const { parentPort } = require('worker_threads');
+      const { parentPort, workerData } = require('worker_threads');
       try {
-        const HID = require('node-hid');
+        const HID = require(workerData.nodeHidPath);
         const all = HID.devices();
         const filtered = all.filter(d =>
           d.vendorId === ${P.VID} &&
@@ -75,10 +82,10 @@ function listDevicesAsync() {
         );
         parentPort.postMessage({ ok: true, devices: filtered });
       } catch (e) {
-        parentPort.postMessage({ ok: false, error: e.message });
+        parentPort.postMessage({ ok: false, error: e.message + ' | path=' + workerData.nodeHidPath });
       }
     `;
-    const worker = new Worker(workerSrc, { eval: true });
+    const worker = new Worker(workerSrc, { eval: true, workerData: { nodeHidPath } });
     worker.on('message', (msg) => {
       if (msg.ok) {
         deviceCache = filterDevices(msg.devices);
