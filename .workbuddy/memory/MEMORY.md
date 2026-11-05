@@ -10,6 +10,12 @@ Incott（因科特）鼠标桌面配置工具，Electron + node-hid，不依赖�
 - 打包：`npm run dist`（electron-builder + NSIS）。**打包前必须 taskkill "Incott Mouse Driver.exe"**，否则 dist 文件被占用报 ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
 - 用户设置持久化在 `%APPDATA%\incott-mouse-app\settings.json`
 
+## Git / 推送（本机网络特殊）
+- 远程 `origin https://github.com/HeHaoren/incott-mouse-app.git`，分支 master；gh CLI 已登录 HeHaoren
+- **本机 DNS 把 github.com 解析到 20.205.243.166（被墙，TCP 不通）**，而 140.82.112.3/113.3/114.3/116.3 与 api.github.com 可直连；沙箱代理 127.0.0.1:11445 对 github.com 返回 502
+- 推送可用：`git -c http.curloptResolve=github.com:443:140.82.114.3 -c http.proxy= -c https.proxy= push origin master`（需在沙箱外执行）
+- 无本地 SSH key；gh token 无 admin:public_key scope
+
 ## 协议关键事实（实机验证过，勿凭印象改）
 - VID 0x093A，usagePage 0xFF05/usage 0x0001，Feature Report ID 9，**数据区固定 8 字节**（HID 描述符确认；Windows HidD_GetFeature 缓冲区必须等于报告长度，超长读取失败——电量 bug 的根因）
 - 写 0x01-0x08 ↔ 读 0x81-0x88 对称；0x87 宏不可回读（全 0xFF）；硬件仅 1 个板载配置
