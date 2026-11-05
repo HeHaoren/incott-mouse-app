@@ -160,6 +160,17 @@ class MouseDevice {
     this._dev.write(buf);
   }
 
+  /**
+   * 监听设备主动上报（Input Report，电量/DPI/回报率变化时推送）。
+   * cb 收到剥离 reportId 后的数据区。官方驱动的电量主通道即此推送。
+   */
+  onData(cb) {
+    this._dev.on('data', (raw) => {
+      if (!raw || raw.length < 2) return;
+      cb(Buffer.from(raw).slice(1));
+    });
+  }
+
   close() {
     try {
       this._dev.close();

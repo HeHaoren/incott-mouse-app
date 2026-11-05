@@ -114,11 +114,90 @@ test('宏编码：320 字节结构', () => {
   assert.equal(b[312] | (b[313] << 8) | (b[314] << 16) | (b[315] << 24), 0x12345678);
 });
 
+test('parseStatusPush 解析设备主动上报', () => {
+  // b0=72% 未充电, b1 低4位=0(1000Hz) 高4位=2(DPI索引), b2 高2位=1(板载配置)
+  const s = P.parseStatusPush(Buffer.from([72, 0x20, 0x40, 0, 0, 0, 0, 0]));
+  assert.deepEqual(s, { power: 72, charging: false, rate: 1000, dpiIndex: 2, profileIndex: 1 });
+  // 充电中：b0 = 128 + 85
+  const c = P.parseStatusPush(Buffer.from([128 + 85, 0x04, 0, 0, 0, 0, 0, 0]));
+  assert.equal(c.power, 85);
+  assert.equal(c.charging, true);
+  assert.equal(c.rate, 8000); // 回报率索引 4 = 8000Hz
+  assert.equal(c.dpiIndex, 0);
+  // 电量越界 / 长度不足 → null
+  assert.equal(P.parseStatusPush(Buffer.from([112, 0x20, 0x40])), null); // 112>100
+  assert.equal(P.parseStatusPush(Buffer.from([0x7f, 0, 0])), null); // 127>100
+  assert.equal(P.parseStatusPush(Buffer.from([50])), null);
+  assert.equal(P.parseStatusPush(null), null);
+});
+
 test('读取命令构造', () => {
   assert.deepEqual([...P.buildReadDpiLevel()], [131, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildReadBattery()], [137, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildReadKey(5)], [134, 5, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildReadMatchInfo()], [142, 1, 0, 0, 0, 0, 0, 0]);
+});
+
+test('读取命令构造（实机验证的对称读命令 0x81~0x88 + 0x8F）', () => {
+  assert.deepEqual([...P.buildReadRate()], [0x81, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildReadResolution(3)], [0x82, 3, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildReadSensor(5)], [0x84, 5, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildReadMisc(2)], [0x85, 2, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildReadReceiverLed()], [0x88, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildReadModelInfo()], [0x8f, 0, 0, 0, 0, 0, 0, 0]);
+});
+
+test('LOD 映射：PAW3950 旋转 [2,0,1]，其他直接映射', () => {
+  // PAW3950：UI 0→hw 2, 1→0, 2→1（官方 apply 流程原样行为）
+  assert.equal(P.lodToHw(0, P.SENSOR.PAW3950), 2);
+  assert.equal(P.lodToHw(1, P.SENSOR.PAW3950), 0);
+  assert.equal(P.lodToHw(2, P.SENSOR.PAW3950), 1);
+  // PAW3395 / 未知传感器：直接映射
+  assert.equal(P.lodToHw(0, P.SENSOR.PAW3395), 0);
+  assert.equal(P.lodToHw(2, P.SENSOR.PAW3395), 2);
+  assert.equal(P.lodToHw(1, null), 1);
+  assert.throws(() => P.lodToHw(3, P.SENSOR.PAW3950), RangeError);
+});
+
+test('回报率钳制：非 8K 接收器 2000Hz+ 回落 1000Hz', () => {
+  // 8K 接收器：不钳制
+  assert.equal(P.clampRate(8000, true), 8000);
+  assert.equal(P.clampRate(2000, true), 2000);
+  // 非 8K（有线/普通接收器）：>1000Hz 钳到 1000
+  assert.equal(P.clampRate(8000, false), 1000);
+  assert.equal(P.clampRate(4000, false), 1000);
+  assert.equal(P.clampRate(2000, false), 1000);
+  assert.equal(P.clampRate(1000, false), 1000);
+  assert.equal(P.clampRate(125, false), 125);
+  // 未知（null）：保持旧行为不钳制
+  assert.equal(P.clampRate(8000, null), 8000);
+  assert.throws(() => P.clampRate(300, true), RangeError);
+});
+
+test('型号信息解析（0x8F）', () => {
+  // 有线 G24 + PAW3950：传感器字节在 buf[4]=241
+  const wired = [0x8f, 1, 3, 0, 241, 0, 0, 0];
+  const info1 = P.parseModelInfo(wired, false);
+  assert.deepEqual(info1, {
+    modelCode: 3,
+    model: 'G24',
+    is8KReceiver: false,
+    sensor: P.SENSOR.PAW3950,
+  });
+  // 无线 G23 + 8K 接收器 + PAW3395：传感器字节在 buf[5]=240
+  const wireless = [0x8f, 1, 2, 2, 0, 240, 0, 0];
+  const info2 = P.parseModelInfo(wireless, true);
+  assert.deepEqual(info2, {
+    modelCode: 2,
+    model: 'G23',
+    is8KReceiver: true,
+    sensor: P.SENSOR.PAW3395,
+  });
+  // 非法输入
+  assert.equal(P.parseModelInfo([0x83, 1, 3, 0, 241, 0, 0, 0], false), null); // 回显不对
+  assert.equal(P.parseModelInfo([0x8f, 0, 3, 0, 241, 0, 0, 0], false), null); // 标志位不为 1
+  assert.equal(P.parseModelInfo([0x8f, 1, 99, 0, 241, 0, 0, 0], false), null); // 未知型号
+  assert.equal(P.parseModelInfo(null, false), null);
 });
 
 test('宏分块命令：[7, totalBlocks, blockIndex, 32, slotId]', () => {
@@ -158,6 +237,12 @@ test('所有命令输出均为 8 字节', () => {
     P.buildSetProfile(2),
     P.buildSetReceiverLed(1),
     P.buildReadDpiLevel(),
+    P.buildReadRate(),
+    P.buildReadResolution(0),
+    P.buildReadSensor(1),
+    P.buildReadMisc(3),
+    P.buildReadReceiverLed(),
+    P.buildReadModelInfo(),
   ];
   for (const b of builders) {
     assert.equal(b.length, 8);

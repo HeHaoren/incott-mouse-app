@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('api', {
   /** 读取：read(readType, ...args) */
   read: (readType, ...args) => ipcRenderer.invoke('mouse:read', readType, ...args),
 
+  /** 订阅设备主动上报的电量（{level, charging}） */
+  onBattery: (cb) => ipcRenderer.on('battery:update', (_e, v) => cb(v)),
+
+  /** 订阅 toast 提示（如 DPI 键切换档位） */
+  onToast: (cb) => ipcRenderer.on('toast', (_e, msg) => cb(msg)),
+
   /** 批量应用（按序 + 间隔）：apply([{action, args, delay}]) */
   apply: (ops) => ipcRenderer.invoke('mouse:apply', ops),
 
@@ -40,6 +46,18 @@ contextBridge.exposeInMainWorld('api', {
 
   /** 更新设置 */
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
+
+  /** 导出当前配置为 .ict（弹保存对话框） */
+  exportProfile: (profileData) => ipcRenderer.invoke('config:exportProfile', profileData),
+
+  /** 导入 .ict 配置（弹打开对话框） */
+  importProfile: () => ipcRenderer.invoke('config:importProfile'),
+
+  /** 导出宏库为 .icm（弹保存对话框） */
+  exportMacros: (macros) => ipcRenderer.invoke('config:exportMacros', macros),
+
+  /** 导入 .icm 宏库（弹打开对话框） */
+  importMacros: () => ipcRenderer.invoke('config:importMacros'),
 });
 
 // i18n（渲染进程通过 window.i18n 使用）

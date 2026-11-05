@@ -11,7 +11,9 @@
 const state = {
   connected: false,
   isWireless: false,
+  modelInfo: null, // 0x8F 型号信息 { model, modelCode, is8KReceiver, sensor }
   battery: null,
+  batteryCharging: false,
   constants: null,
   maxDpi: 32000,
   dpiLevels: [], // [{ x, y, color }]
@@ -134,9 +136,22 @@ function bindEvents() {
 
   // 连接
   $('#connectBtn').addEventListener('click', onConnect);
-  $('#battery').addEventListener('click', refreshBattery);
+  $('#battery').addEventListener('click', onBatteryClick);
+  // 设备主动上报的电量（官方主通道：推送即更新）
+  window.api.onBattery(({ level, charging }) => {
+    state.battery = level;
+    state.batteryCharging = charging;
+    renderBattery();
+  });
+  // 主进程 toast（如鼠标 DPI 键切换档位）
+  window.api.onToast((msg) => showToast(msg));
   $('#applyBtn').addEventListener('click', onApply);
   $('#addDpiBtn').addEventListener('click', onAddDpi);
+  // 配置 / 宏 导入导出（官方 .ict / .icm 格式）
+  $('#importBtn').addEventListener('click', onImportProfile);
+  $('#exportBtn').addEventListener('click', onExportProfile);
+  $('#macroImportBtn').addEventListener('click', onMacroImport);
+  $('#macroExportBtn').addEventListener('click', onMacroExport);
   $('#xySplit').addEventListener('change', (e) => {
     state.xySplit = e.target.checked;
     if (state.xySplit) {
@@ -187,7 +202,9 @@ async function onConnect() {
   if (state.connected) {
     await window.api.closeDevice();
     state.connected = false;
+    state.modelInfo = null;
     state.battery = null;
+    state.batteryCharging = false;
     renderDevice();
     return;
   }
@@ -205,7 +222,7 @@ async function onConnect() {
     const st = await window.api.openDevice();
     state.connected = st.opened;
     state.isWireless = st.isWireless;
-    if (state.isWireless) state.maxDpi = state.constants.sensors.PAW3950.maxDpi;
+    applyModelInfo(st.modelInfo);
     setDeviceLabel(t('readingConfig'));
     renderDevice();
 
@@ -228,6 +245,22 @@ async function onConnect() {
   }
 }
 
+/** 应用 0x8F 型号信息：决定 DPI 上限（按传感器）与回报率可选范围（按 8K 接收器） */
+function applyModelInfo(info) {
+  state.modelInfo = info || null;
+  if (info && state.constants) {
+    state.maxDpi = info.sensor === state.constants.sensors.PAW3950.id
+      ? state.constants.sensors.PAW3950.maxDpi
+      : state.constants.sensors.PAW3395.maxDpi;
+  } else if (state.isWireless && state.constants) {
+    // 读不到型号信息时回退旧行为（无线按 PAW3950 上限）
+    state.maxDpi = state.constants.sensors.PAW3950.maxDpi;
+  }
+  // 非 8K 接收器时高回报率不可选，当前值超限则回落
+  if (info && !info.is8KReceiver && state.rate > 1000) state.rate = 1000;
+  renderPerformance();
+}
+
 function showSpinner() {
   $('#deviceSpinner').classList.remove('hidden');
   $('#connectBtn').disabled = true;
@@ -244,6 +277,7 @@ async function refreshDeviceState() {
     if (st.opened) {
       state.connected = true;
       state.isWireless = st.isWireless;
+      applyModelInfo(st.modelInfo);
       renderDevice();
     }
   } catch (_) { /* 未连接 */ }
@@ -254,10 +288,24 @@ function setDeviceLabel(text, isErr = false) {
   $('#deviceLabel').style.color = isErr ? 'var(--red)' : '';
 }
 
+/** 顶栏显示型号 · 传感器 · 8K（来自 0x8F 型号信息，读不到则隐藏） */
+function renderDeviceInfo() {
+  const el = $('#deviceInfo');
+  if (!state.connected || !state.modelInfo || !state.constants) {
+    el.classList.add('hidden');
+    return;
+  }
+  const info = state.modelInfo;
+  const sensorName = info.sensor === state.constants.sensors.PAW3950.id ? 'PAW3950' : 'PAW3395';
+  el.textContent = `${info.model} · ${sensorName}` + (info.is8KReceiver ? ' · 8K' : '');
+  el.classList.remove('hidden');
+}
+
 function renderDevice() {
   $('#deviceStatus').className = 'status-dot ' + (state.connected ? 'on' : 'off');
   $('#connectBtn').textContent = state.connected ? t('disconnect') : t('connect');
   $('#applyBtn').disabled = !state.connected;
+  renderDeviceInfo();
   renderBattery();
 }
 
@@ -275,12 +323,34 @@ function startBatteryAutoRefresh() {
 async function refreshBattery() {
   if (!state.connected) return;
   try {
-    const val = await window.api.read('battery');
-    state.battery = val;
+    const val = await window.api.read('battery'); // { level, charging }
+    state.battery = val.level;
+    state.batteryCharging = val.charging;
     renderBattery();
   } catch (_) {
     /* 读电量失败静默（保留上次值） */
   }
+}
+
+/** 点击电量图标：刷新并弹提示（电量 + 充电状态） */
+async function onBatteryClick() {
+  await refreshBattery();
+  if (state.battery != null) {
+    const charging = state.batteryCharging ? ` · ${t('chargingTag')}⚡` : '';
+    showToast(`${t('batteryLabel')} ${state.battery}%${charging}`);
+  }
+}
+
+// ── Toast ──────────────────────────────────────────────────
+let toastTimer = null;
+
+function showToast(msg) {
+  const el = $('#toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
 }
 
 function renderBattery() {
@@ -292,6 +362,8 @@ function renderBattery() {
   el.classList.remove('hidden');
   el.title = t('batteryHint');
   $('#batteryVal').textContent = state.battery;
+  const icon = el.querySelector('.battery-icon');
+  if (icon) icon.textContent = state.batteryCharging ? '⚡' : '🔋';
   // 三段颜色：>60 绿，25~60 黄，≤25 红（对齐官方驱动的电量显示规则）
   el.classList.remove('high', 'mid', 'low');
   if (state.battery > 60) el.classList.add('high');
@@ -440,10 +512,15 @@ function syncDpiLevels(levels, current) {
 
 // ── 性能 ───────────────────────────────────────────────────
 function renderPerformance() {
-  // 轮询率
+  if (!state.constants) return;
+  // 轮询率：非 8K 接收器（含有线）只提供 ≤1000Hz（硬件会钳制，实机验证）
+  const gateHighRates = state.modelInfo && !state.modelInfo.is8KReceiver;
+  const rates = gateHighRates
+    ? state.constants.rateTable.filter((r) => r.hz <= 1000)
+    : state.constants.rateTable;
   const rateList = $('#rateList');
   rateList.innerHTML = '';
-  state.constants.rateTable.forEach((r) => {
+  rates.forEach((r) => {
     const chip = document.createElement('button');
     chip.className = 'rate-chip' + (r.hz === state.rate ? ' selected' : '');
     chip.textContent = r.hz + ' Hz';
@@ -453,6 +530,16 @@ function renderPerformance() {
     });
     rateList.appendChild(chip);
   });
+  // 8K 门控提示
+  const old = $('#rate8kNote');
+  if (old) old.remove();
+  if (gateHighRates) {
+    const note = document.createElement('div');
+    note.id = 'rate8kNote';
+    note.className = 'opt-desc warn';
+    note.textContent = t('rate8kOnly');
+    rateList.after(note);
+  }
 
   // LOD
   const lodList = $('#lodList');
@@ -786,6 +873,104 @@ function buildApplyOps() {
 
 function dpiToHwSafe(dpi) {
   return Math.round((dpi - 50) / 50);
+}
+
+// ── 配置导入导出（.ict，兼容官方网页驱动格式）────────────────
+function buildProfileExport() {
+  return {
+    name: 'Profile ' + (state.profile + 1),
+    sensor: state.modelInfo ? state.modelInfo.sensor : undefined,
+    rate: state.rate,
+    lod: state.lod,
+    sensorMode: 1,
+    angleSnap: state.angleSnap,
+    ripple: state.ripple,
+    motionSync: state.motionSync,
+    debounce: state.debounce,
+    sleepTime: state.sleepTime,
+    receiverLed: 0,
+    currentDpi: state.currentDpi,
+    dpiLevels: state.dpiLevels,
+    buttons: state.buttons,
+  };
+}
+
+async function onExportProfile() {
+  try {
+    const res = await window.api.exportProfile(buildProfileExport());
+    if (!res.canceled) flashStatus(t('configExported'));
+  } catch (e) {
+    flashStatus(t('exportFailed') + e.message, true);
+  }
+}
+
+async function onImportProfile() {
+  try {
+    const res = await window.api.importProfile();
+    if (res.canceled) return;
+    applyImportedProfile(res.profile);
+    renderAll();
+    saveLocalConfig();
+    flashStatus(t('configImported'));
+  } catch (e) {
+    flashStatus(t('importFailed') + e.message, true);
+  }
+}
+
+function applyImportedProfile(p) {
+  if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
+    state.dpiLevels = p.dpiLevels.map((lv) => ({ x: lv.x, y: lv.y, color: lv.color }));
+    // X/Y 不一致时自动打开 XY 分离显示
+    state.xySplit = p.dpiLevels.some((lv) => lv.x !== lv.y);
+  }
+  state.currentDpi = clamp(p.currentDpi ?? 0, 0, state.dpiLevels.length - 1);
+  if (p.rate) state.rate = p.rate;
+  if (p.lod != null) state.lod = clamp(p.lod, 0, 2);
+  state.angleSnap = !!p.angleSnap;
+  state.ripple = !!p.ripple;
+  state.motionSync = !!p.motionSync;
+  if (p.debounce != null) state.debounce = clamp(p.debounce, 0, 30);
+  if (p.sleepTime != null) {
+    // 休眠时间下拉只有固定档位，吸附到最近可选值
+    const opts = [10, 30, 60, 300, 600, 1800];
+    state.sleepTime = opts.reduce((a, b) =>
+      Math.abs(b - p.sleepTime) < Math.abs(a - p.sleepTime) ? b : a);
+  }
+  if (Array.isArray(p.buttons) && p.buttons.length === 6) state.buttons = p.buttons;
+  // 非 8K 接收器回落超范围回报率
+  if (state.modelInfo && !state.modelInfo.is8KReceiver && state.rate > 1000) state.rate = 1000;
+}
+
+// ── 宏库导入导出（.icm，兼容官方网页驱动格式）────────────────
+async function onMacroExport() {
+  try {
+    const res = await window.api.exportMacros(state.macros);
+    if (!res.canceled) flashMacroStatus(t('macrosExported'));
+  } catch (e) {
+    flashMacroStatus(t('exportFailed') + e.message, true);
+  }
+}
+
+async function onMacroImport() {
+  try {
+    const res = await window.api.importMacros();
+    if (res.canceled) return;
+    // 导入的宏按顺序占用槽位 0..n-1，其余槽位重置为空（与官方宏库替换语义一致）
+    const imported = res.macros.slice(0, 10);
+    state.macros = [];
+    for (let s = 0; s < 10; s++) {
+      const m = imported[s];
+      state.macros.push(m
+        ? { slot: s, name: m.name || (t('macroPrefix') + (s + 1)), loopType: m.loopType, cycle: m.cycle, items: m.items }
+        : { slot: s, name: t('macroPrefix') + (s + 1), loopType: 2, cycle: 1, items: [] });
+    }
+    state.currentMacro = 0;
+    renderMacro();
+    saveLocalConfig();
+    flashMacroStatus(t('macrosImported') + imported.length + t('macroUnit'));
+  } catch (e) {
+    flashMacroStatus(t('importFailed') + e.message, true);
+  }
 }
 
 function flashStatus(text, isErr) {

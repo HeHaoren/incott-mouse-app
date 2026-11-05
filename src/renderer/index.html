@@ -17,6 +17,7 @@
       <span id="deviceStatus" class="status-dot off"></span>
       <span id="deviceSpinner" class="spinner hidden"></span>
       <span id="deviceLabel" class="device-label" data-i18n="notConnected">未连接设备</span>
+      <span id="deviceInfo" class="device-info hidden"></span>
       <span id="battery" class="battery hidden">
         <span class="battery-icon">🔋</span><span id="batteryVal">--</span>%
       </span>
@@ -170,6 +171,8 @@
         </div>
 
         <div class="macro-actions">
+          <button id="macroImportBtn" class="btn btn-ghost" data-i18n="importMacroFile">导入宏</button>
+          <button id="macroExportBtn" class="btn btn-ghost" data-i18n="exportMacroFile">导出宏</button>
           <span id="macroStatus" class="apply-status"></span>
           <button id="macroUploadBtn" class="btn btn-accent" data-i18n="uploadMacro">上传到鼠标</button>
         </div>
@@ -193,11 +196,14 @@
       <button class="profile-btn" data-profile="4">5</button>
     </div>
     <div class="bottombar-actions">
+      <button id="importBtn" class="btn btn-ghost" data-i18n="importConfig">导入配置</button>
+      <button id="exportBtn" class="btn btn-ghost" data-i18n="exportConfig">导出配置</button>
       <span id="applyStatus" class="apply-status"></span>
       <button id="applyBtn" class="btn btn-accent" data-i18n="apply">应用到鼠标</button>
     </div>
   </footer>
 
+  <div id="toast" class="toast hidden"></div>
   <script src="app.js"></script>
 </body>
 </html>

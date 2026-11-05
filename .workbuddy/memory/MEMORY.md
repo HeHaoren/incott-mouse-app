@@ -1,0 +1,28 @@
+# Incott Mouse App — 项目长期记忆
+
+## 项目概况
+Incott（因科特）鼠标桌面配置工具，Electron + node-hid，不依赖官方网页驱动。
+逆向依据：`F:\AI Agent\Reverse Engineer Anything\incott-web-driver-re`（分析报告 + Caldis 实机验证 + oexi 移植版源码）。
+
+## 环境与构建
+- Node 在 `F:\AI Agent\nodejs\node.exe`（系统 PATH 未必有，脚本里 `export PATH="/f/AI Agent/nodejs:$PATH"`）
+- 测试：`node --test`（当前 31 个全绿）；语法检查 `node --check`
+- 打包：`npm run dist`（electron-builder + NSIS）。**打包前必须 taskkill "Incott Mouse Driver.exe"**，否则 dist 文件被占用报 ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+- 用户设置持久化在 `%APPDATA%\incott-mouse-app\settings.json`
+
+## 协议关键事实（实机验证过，勿凭印象改）
+- VID 0x093A，usagePage 0xFF05/usage 0x0001，Feature Report ID 9，**数据区固定 8 字节**（HID 描述符确认；Windows HidD_GetFeature 缓冲区必须等于报告长度，超长读取失败——电量 bug 的根因）
+- 写 0x01-0x08 ↔ 读 0x81-0x88 对称；0x87 宏不可回读（全 0xFF）；硬件仅 1 个板载配置
+- 0x8F 型号信息：buf[1]==1 标志；buf[2] 型号码（3=G24 等）；buf[3]==2 → 8K 接收器；传感器字节有线 buf[4]/无线 buf[5]，241=PAW3950
+- LOD：PAW3950 旋转映射 [2,0,1]（UI 0→hw2,1→hw0,2→hw1），源自官方 apply 流程；非 3950 直传
+- 回报率：非 8K/有线 2000Hz+ 被硬件钳制 1000Hz；clampRate 应用层预钳，deviceInfo 读不到时不钳
+- **电量主通道 = 设备主动上报 Input Report**（parseStatusPush：b0=电量|充电位128, b1=回报率索引|DPI索引<<4, b2=配置序号<<6）；0x89 轮询只作补充，电量在 buf[1]（>128 表充电减 128）。官方 UI「电量同步中」= 等推送
+
+## .ict/.icm 格式坑（config-format.js）
+- .ict key[] 是 UI 顺序 [左右中前进后退DPI]，App 是矩阵顺序 → ICT_TO_APP_INDEX=[0,1,2,4,3,5]
+- 官方 looptype 1/2/3 = 硬件 loopType 0/1/2；dpicolor 是 0xBBGGRR 整数
+- 宏键 itemdata 官方存宏库 uid，本工具写槽位号（本工具往返无损，官方导入宏键可能解析不到）
+
+## 用户偏好
+- 用户的鼠标：Incott G24 8K 无线（PID 0x522C，PAW3950）
+- 托盘 UX 需求（已确认）：单击/双击呼出窗口、右键菜单常驻电量、开机自启静默（--background）而手动运行必弹窗、DPI 切换弹提示、托盘图标按电量绿/黄/红变色

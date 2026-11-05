@@ -53,6 +53,7 @@ body {
 .status-dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
 .status-dot.off { background: #3d444d; }
 .device-label { font-size: 13px; color: var(--text-dim); }
+.device-info { font-size: 12px; color: var(--accent); }
 
 /* 电量显示 */
 .battery {
@@ -290,6 +291,26 @@ body {
 .apply-status { font-size: 12.5px; color: var(--text-dim); }
 .apply-status.ok { color: var(--green); }
 .apply-status.err { color: var(--red); }
+
+/* Toast 提示（DPI 切换 / 电量查询反馈） */
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 64px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  animation: toast-in 0.18s ease-out;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* ── 宏编辑器 ──────────────────────── */
 .macro-slots { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }

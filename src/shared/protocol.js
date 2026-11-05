@@ -36,6 +36,20 @@ const RATE_TABLE = [
 
 // ── LOD ───────────────────────────────────────────────────
 const LOD_TABLE = [0.7, 1, 2]; // UI 值（mm），硬件码即索引 0/1/2
+// PAW3950 的 UI→硬件码旋转映射（源自官方网页驱动 apply 流程）：
+// UI 0(0.7mm)→hw 2, UI 1(1mm)→hw 0, UI 2(2mm)→hw 1。PAW3395 为直接映射。
+const LOD_HW_3950 = [2, 0, 1];
+
+// ── 型号（0x8F 读命令返回 byte 2）─────────────────────────
+const MODEL_TABLE = {
+  1: 'Ghero',
+  2: 'G23',
+  3: 'G24',
+  6: 'G29',
+  8: 'G23V2',
+  9: 'FM23',
+  14: 'G23V2',
+};
 
 // ── 按键矩阵（byte 1 = 矩阵位置）───────────────────────────
 const KEY_MATRIX = {
@@ -154,6 +168,79 @@ function maxDpiForSensor(sensor) {
   return sensor === SENSOR.PAW3950 ? 45000 : 32000;
 }
 
+// ── LOD 映射 ───────────────────────────────────────────────
+/**
+ * UI LOD 索引 → 硬件码。
+ * PAW3950 走旋转映射 [2,0,1]（官方网页驱动 apply 流程原样行为）；
+ * 其他传感器（PAW3395/未知）直接映射。
+ */
+function lodToHw(uiLod, sensor) {
+  if (uiLod < 0 || uiLod > 2) throw new RangeError(`LOD 索引越界: ${uiLod}`);
+  return sensor === SENSOR.PAW3950 ? LOD_HW_3950[uiLod] : uiLod;
+}
+
+// ── 回报率钳制 ─────────────────────────────────────────────
+/**
+ * 实机验证（Caldis G24 有线）：有线/非 8K 接收器上 2000/4000/8000Hz
+ * 会被硬件钳制为 1000Hz。>1000Hz 只在 8K 接收器下可用。
+ */
+function isRateSupported(hz, is8KReceiver) {
+  if (is8KReceiver == null) return true; // 未知时不限制（保持旧行为）
+  if (!is8KReceiver && hz > 1000) return false;
+  return RATE_TABLE.some((r) => r.hz === hz);
+}
+
+/** hz 钳制到当前接收器能力；不支持的档位回落到 1000Hz */
+function clampRate(hz, is8KReceiver) {
+  if (!RATE_TABLE.some((r) => r.hz === hz)) throw new RangeError(`不支持的轮询率: ${hz}Hz`);
+  if (!isRateSupported(hz, is8KReceiver)) return 1000;
+  return hz;
+}
+
+// ── 型号信息解析（0x8F）────────────────────────────────────
+/**
+ * 解析 0x8F 回包（已剥离 reportId 的 8 字节数据区）。
+ * 布局：buf[0]=0x8F 回显, buf[1]=1(标志), buf[2]=型号码, buf[3]=接收器类型(2=8K),
+ *       传感器字节：有线在 buf[4]，无线在 buf[5]；241=PAW3950，否则 PAW3395。
+ * 解析失败（非本命令回包/标志不对/未知型号）返回 null。
+ */
+function parseModelInfo(buf, isWireless) {
+  if (!buf || buf.length < 6) return null;
+  if (buf[0] !== 0x8f || buf[1] !== 1) return null;
+  const modelCode = buf[2];
+  const model = MODEL_TABLE[modelCode];
+  if (!model) return null;
+  const is8KReceiver = buf[3] === 2;
+  const sensorByte = buf[isWireless ? 5 : 4];
+  const sensor = sensorByte === 241 ? SENSOR.PAW3950 : SENSOR.PAW3395;
+  return { modelCode, model, is8KReceiver, sensor };
+}
+
+// ── 设备主动上报解析（Input Report，官方 irServer 同源）────
+/**
+ * 解析鼠标主动推送的状态包（电量/回报率/DPI/板载配置变化时发送）。
+ * buf 为剥离 reportId 后的数据区：
+ *   buf[0] = 电量 0-100，bit7 (128) = 充电中标志
+ *   buf[1] = 低 4 位回报率索引 | 高 4 位当前 DPI 索引
+ *   buf[2] = 高 2 位板载配置序号
+ * 官方驱动的电量以此推送为准（其 UI 的「电量同步中」就是在等推送）。
+ * 无法识别为状态包时返回 null。
+ */
+function parseStatusPush(buf) {
+  if (!buf || buf.length < 3) return null;
+  const power = buf[0] & 127;
+  if (power > 100) return null; // 电量越界 → 不是状态包
+  const rateIdx = buf[1] & 15;
+  const rateEntry = rateIdx < RATE_TABLE.length ? RATE_TABLE.find((r) => r.code === rateIdx) : null;
+  return {
+    power,
+    charging: (buf[0] & 128) !== 0,
+    rate: rateEntry ? rateEntry.hz : null,
+    dpiIndex: (buf[1] & 240) >> 4,
+    profileIndex: (buf[2] & 192) >> 6,
+  };
+}
+
 // ── 命令构造（全部返回 8 字节 Buffer）───────────────────────
 function cmd(op, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0) {
   return Buffer.from([op, p1, p2, p3, p4, p5, p6, p7]);
@@ -234,9 +321,29 @@ function buildSetReceiverLed(mode) {
   return cmd(8, mode);
 }
 
-/** 读取命令：byte 0 = 命令码，byte 1.. = 参数 */
+/** 读取命令：byte 0 = 命令码，byte 1.. = 参数。
+ *  写命令 0x01~0x08 对应读命令 0x81~0x88（实机验证，见 docs/protocol.md §4），
+ *  另有 0x89 状态 / 0x8E 配对 / 0x8F 型号信息三条独立读命令。 */
+function buildReadRate() {
+  return cmd(0x81);
+}
+function buildReadResolution(slot) {
+  return cmd(0x82, slot);
+}
 function buildReadDpiLevel() {
-  return cmd(131);
+  return cmd(131); // 0x83
+}
+function buildReadSensor(sub) {
+  return cmd(0x84, sub);
+}
+function buildReadMisc(sub) {
+  return cmd(0x85, sub);
+}
+function buildReadReceiverLed() {
+  return cmd(0x88);
+}
+function buildReadModelInfo() {
+  return cmd(0x8f); // 143
 }
 function buildReadBattery() {
   return cmd(0x89); // 读接收器完整状态（电量在响应 buf[1]，见 anuonie 协议）
@@ -342,6 +449,8 @@ module.exports = {
   SENSOR,
   RATE_TABLE,
   LOD_TABLE,
+  LOD_HW_3950,
+  MODEL_TABLE,
   KEY_MATRIX,
   MOUSE_KEYS,
   MEDIA_KEYS,
@@ -352,6 +461,12 @@ module.exports = {
   dpiToHw,
   hwToDpi,
   maxDpiForSensor,
+  // LOD / 回报率 / 型号
+  lodToHw,
+  isRateSupported,
+  clampRate,
+  parseModelInfo,
+  parseStatusPush,
   // 命令构造
   buildSetRate,
   buildSetResolution,
@@ -368,7 +483,13 @@ module.exports = {
   buildSetProfile,
   buildMacroBlock,
   buildSetReceiverLed,
+  buildReadRate,
+  buildReadResolution,
   buildReadDpiLevel,
+  buildReadSensor,
+  buildReadMisc,
+  buildReadReceiverLed,
+  buildReadModelInfo,
   buildReadBattery,
   buildReadKey,
   buildReadMatchInfo,
