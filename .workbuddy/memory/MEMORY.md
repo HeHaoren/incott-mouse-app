@@ -24,6 +24,13 @@ Incott（因科特）鼠标桌面配置工具，Electron + node-hid，不依赖�
 - 回报率：非 8K/有线 2000Hz+ 被硬件钳制 1000Hz；clampRate 应用层预钳，deviceInfo 读不到时不钳
 - **电量主通道 = 设备主动上报 Input Report**（parseStatusPush：b0=电量|充电位128, b1=回报率索引|DPI索引<<4, b2=配置序号<<6）；0x89 轮询只作补充，电量在 buf[1]（>128 表充电减 128）。官方 UI「电量同步中」= 等推送
 
+## 稳定性铁律（都踩过坑，改代码时别破坏）
+- **HID 设备必须挂 `error` 监听**：加了 `data` 监听后 node-hid 会开后台读线程，拔出瞬间 emit error，不监听就弹"主进程未捕获异常"（0x48F = 设备已断开）
+- **设备枚举缓存必须能失效**：切 8K/有线无线模式会重新枚举、接口 path 全变，旧 path 打开报 0x2。`invalidateCache()` + 打开失败时强制重枚举重试
+- `handleDeviceGone(err, sourceDevice)` 要按实例判定，否则旧句柄的迟到错误会误清刚建立的新连接
+- **style.css 没有全局 `.hidden`**，只有 `.spinner.hidden` 等组件专属规则；新组件用 hidden 类必须自己写 `.xxx.hidden { display:none }`（toast 曾因此永不消失）
+- 回报率码表顺序是硬件编码（1000/500/250/125/8000/4000/2000），展示要按 hz 排序
+
 ## .ict/.icm 格式坑（config-format.js）
 - .ict key[] 是 UI 顺序 [左右中前进后退DPI]，App 是矩阵顺序 → ICT_TO_APP_INDEX=[0,1,2,4,3,5]
 - 官方 looptype 1/2/3 = 硬件 loopType 0/1/2；dpicolor 是 0xBBGGRR 整数
