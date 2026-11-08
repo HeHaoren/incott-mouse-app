@@ -545,9 +545,11 @@ function renderPerformance() {
   if (!state.constants) return;
   // 轮询率：非 8K 接收器（含有线）只提供 ≤1000Hz（硬件会钳制，实机验证）
   const gateHighRates = state.modelInfo && !state.modelInfo.is8KReceiver;
-  const rates = gateHighRates
+  // 从小到大排序展示（协议码表顺序是 1000/500/250/125/8000/4000/2000，直接渲染不直观）
+  const rates = (gateHighRates
     ? state.constants.rateTable.filter((r) => r.hz <= 1000)
-    : state.constants.rateTable;
+    : state.constants.rateTable
+  ).slice().sort((a, b) => a.hz - b.hz);
   const rateList = $('#rateList');
   rateList.innerHTML = '';
   rates.forEach((r) => {

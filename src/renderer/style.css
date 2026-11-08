@@ -244,6 +244,7 @@ body {
   background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
   padding: 6px 12px; border-radius: 7px; cursor: pointer; font-size: 12.5px;
   font-family: var(--font); transition: all .12s;
+  min-width: 66px; text-align: center;
 }
 .rate-chip:hover { border-color: var(--accent); color: var(--accent); }
 .rate-chip.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
