@@ -258,6 +258,51 @@ function getConstants() {
   };
 }
 
+// ── 设备断连处理 ───────────────────────────────────────────
+/** node-hid 在设备拔出/接收器掉线时的错误特征（hid_read_timeout / GetOverlappedResult 0x48F / 0x2） */
+function isDeviceGoneError(e) {
+  const m = String((e && e.message) || e || '');
+  return /hid_read_timeout|GetOverlappedResult|0x0000048F|0x48F|not connected|device not found|cannot open device|0x00000002|HidD_/i.test(m);
+}
+
+/**
+ * 设备拔出/掉线：清理状态、托盘复位、通知渲染层回到未连接。
+ * 由 node-hid 的 error 事件或读写异常触发。
+ */
+function handleDeviceGone(err) {
+  if (!device) return; // 已处理过，避免重复
+  console.warn('[hid] 设备已断开:', String((err && err.message) || err || ''));
+  try {
+    device.close();
+  } catch (_) {
+    /* 句柄可能已失效 */
+  }
+  device = null;
+  deviceInfo = null;
+  lastPushDpi = null;
+  hid.invalidateCache(); // 重新插上后接口路径可能变化
+  updateTrayBattery(null);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('device:disconnected');
+  }
+}
+
+/**
+ * 统一的设备操作包装：未连接报错；底层报设备不存在时转为断连处理 + 友好提示。
+ */
+async function withDevice(fn) {
+  if (!device) throw new Error('设备未连接，请先连接鼠标');
+  try {
+    return await fn(device);
+  } catch (e) {
+    if (isDeviceGoneError(e)) {
+      handleDeviceGone(e);
+      throw new Error('鼠标已断开（被拔出或接收器掉线），请重新连接');
+    }
+    throw e;
+  }
+}
+
 // ── IPC 注册 ────────────────────────────────────────────────
 function registerIpc() {
   ipcMain.handle('mouse:list', () => hid.listDevicesAsync());
@@ -265,6 +310,7 @@ function registerIpc() {
   ipcMain.handle('mouse:open', async (_e, pathArg) => {
     if (device) device.close();
     device = await hid.openDevice(pathArg); // 失败会自动重新枚举重试一次（设备切换模式后路径会变）
+    device.onError((e) => handleDeviceGone(e)); // 拔出/接收器掉线：更新状态不弹未捕获异常
     deviceInfo = await readDeviceInfo(); // 连接即识别型号/传感器/8K 接收器（失败为 null）
     // 监听设备主动上报（官方电量的主通道）：电量/充电/回报率/DPI 变化时推送
     device.onData((buf) => {
@@ -300,23 +346,23 @@ function registerIpc() {
   ipcMain.handle('mouse:constants', () => getConstants());
 
   ipcMain.handle('mouse:exec', async (_e, action, ...args) => {
-    if (!device) throw new Error('设备未连接，请先连接鼠标');
     const builder = EXEC_ACTIONS[action];
     if (!builder) throw new Error(`未知操作: ${action}`);
     const cmdBytes = builder(...args);
     writing = true;
     try {
-      device.sendFeatureReport(cmdBytes);
-      return true;
+      return await withDevice((dev) => {
+        dev.sendFeatureReport(cmdBytes);
+        return true;
+      });
     } finally {
       writing = false;
     }
   });
 
   ipcMain.handle('mouse:read', async (_e, readType, ...args) => {
-    if (!device) throw new Error('设备未连接，请先连接鼠标');
     if (readType === 'battery') {
-      const val = await readBatteryValue();
+      const val = await withDevice(() => readBatteryValue());
       if (val == null) throw new Error('设备未响应（可能处于休眠状态）');
       updateTrayBattery(val.level, val.charging); // 手动刷新同步托盘
       return val; // { level, charging }
@@ -324,29 +370,32 @@ function registerIpc() {
     const def = READ_ACTIONS[readType];
     if (!def) throw new Error(`未知读取: ${readType}`);
     const cmdBytes = def.build(...args);
-    device.sendFeatureReport(cmdBytes);
-    await sleep(50);
-    const buf = device.getFeatureReport(P.REPORT_DATA_LEN);
-    // 设备休眠/无响应时返回全 0（buf[0] 无命令回显），视为无效读取，避免解析出错误值
-    if (buf[0] !== cmdBytes[0]) {
-      throw new Error('设备未响应（可能处于休眠状态）');
-    }
-    return def.parse(buf, ...args);
+    return withDevice(async (dev) => {
+      dev.sendFeatureReport(cmdBytes);
+      await sleep(50);
+      const buf = dev.getFeatureReport(P.REPORT_DATA_LEN);
+      // 设备休眠/无响应时返回全 0（buf[0] 无命令回显），视为无效读取，避免解析出错误值
+      if (buf[0] !== cmdBytes[0]) {
+        throw new Error('设备未响应（可能处于休眠状态）');
+      }
+      return def.parse(buf, ...args);
+    });
   });
 
   // 批量应用：按协议 apply 流程顺序执行一组操作（带间隔）
   ipcMain.handle('mouse:apply', async (_e, ops) => {
-    if (!device) throw new Error('设备未连接，请先连接鼠标');
     writing = true;
     try {
-      for (const op of ops) {
-        const { action, args = [] } = op;
-        const builder = EXEC_ACTIONS[action];
-        if (!builder) throw new Error(`未知操作: ${action}`);
-        device.sendFeatureReport(builder(...args));
-        await sleep(op.delay ?? 200);
-      }
-      return true;
+      return await withDevice(async (dev) => {
+        for (const op of ops) {
+          const { action, args = [] } = op;
+          const builder = EXEC_ACTIONS[action];
+          if (!builder) throw new Error(`未知操作: ${action}`);
+          dev.sendFeatureReport(builder(...args));
+          await sleep(op.delay ?? 200);
+        }
+        return true;
+      });
     } finally {
       writing = false;
     }
@@ -354,7 +403,6 @@ function registerIpc() {
 
   // 宏上传：编码 320 字节后分 10 块，每块 feature report 准备 + output report 传数据
   ipcMain.handle('mouse:uploadMacro', async (_e, macro) => {
-    if (!device) throw new Error('设备未连接，请先连接鼠标');
     if (macro == null || typeof macro.slot !== 'number') {
       throw new Error('宏数据无效');
     }
@@ -363,13 +411,15 @@ function registerIpc() {
     const slot = macro.slot & 0xff;
     writing = true;
     try {
-      for (let i = 0; i < 10; i++) {
-        device.sendFeatureReport(P.buildMacroBlock(10, i, slot));
-        await sleep(80);
-        device.sendReport(bytes.slice(i * 32, i * 32 + 32));
-        await sleep(80);
-      }
-      return true;
+      return await withDevice(async (dev) => {
+        for (let i = 0; i < 10; i++) {
+          dev.sendFeatureReport(P.buildMacroBlock(10, i, slot));
+          await sleep(80);
+          dev.sendReport(bytes.slice(i * 32, i * 32 + 32));
+          await sleep(80);
+        }
+        return true;
+      });
     } finally {
       writing = false;
     }
@@ -539,8 +589,9 @@ async function pollBattery() {
   try {
     const val = await readBatteryValue();
     if (val != null) updateTrayBattery(val.level, val.charging);
-  } catch (_) {
-    /* 设备拔出/休眠，忽略本次，下次重试 */
+  } catch (e) {
+    // 设备拔出/接收器掉线 → 更新为未连接，不弹异常；休眠则忽略本次，下次重试
+    if (isDeviceGoneError(e)) handleDeviceGone(e);
   }
 }
 
@@ -596,6 +647,16 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// 兜底：node-hid 的读线程可能在设备拔出的瞬间抛异常（HID device 的 error 事件之外的路径），
+// 这里拦下「设备已断开」类异常转为状态更新，避免弹出未捕获异常对话框。
+process.on('uncaughtException', (e) => {
+  if (isDeviceGoneError(e)) {
+    handleDeviceGone(e);
+    return;
+  }
+  console.error('[main] 未捕获异常:', e);
+});
 
 app.whenReady().then(() => {
   registerIpc();

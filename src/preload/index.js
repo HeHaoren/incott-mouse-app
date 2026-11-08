@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('api', {
   /** 订阅 toast 提示（如 DPI 键切换档位） */
   onToast: (cb) => ipcRenderer.on('toast', (_e, msg) => cb(msg)),
 
+  /** 订阅设备断开（拔出/接收器掉线） */
+  onDisconnected: (cb) => ipcRenderer.on('device:disconnected', () => cb()),
+
   /** 批量应用（按序 + 间隔）：apply([{action, args, delay}]) */
   apply: (ops) => ipcRenderer.invoke('mouse:apply', ops),
 

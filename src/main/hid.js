@@ -145,6 +145,8 @@ class MouseDevice {
   constructor(path) {
     this._dev = new HID.HID(path);
     this.path = path;
+    this._closed = false;
+    this._errorHandlers = [];
     let info = null;
     try {
       info = this._dev.getDeviceInfo();
@@ -155,6 +157,30 @@ class MouseDevice {
     this.product = info ? info.product : '';
     this.isWireless = this.productId === P.PID_WIRELESS ||
       /wireless|无线/i.test(this.product || '');
+    // 设备拔出/接收器掉线时，node-hid 的后台读线程会 emit 'error'
+    // （hid_read_timeout/GetOverlappedResult 0x48F）。不监听会变成主进程未捕获异常弹窗。
+    this._dev.on('error', (e) => this._handleError(e));
+  }
+
+  /** 注册断连回调（设备拔出/读取线程报错时触发一次） */
+  onError(cb) {
+    this._errorHandlers.push(cb);
+  }
+
+  _handleError(e) {
+    if (this._closed) return;
+    this._closed = true;
+    for (const cb of this._errorHandlers) {
+      try {
+        cb(e);
+      } catch (_) {
+        /* 回调异常不影响其它监听者 */
+      }
+    }
+  }
+
+  get isOpen() {
+    return !this._closed;
   }
 
   /** 发送 Feature Report（8 字节数据 + reportId=9） */
@@ -190,6 +216,7 @@ class MouseDevice {
   }
 
   close() {
+    this._closed = true;
     try {
       this._dev.close();
     } catch (_) {

@@ -145,6 +145,17 @@ function bindEvents() {
   });
   // 主进程 toast（如鼠标 DPI 键切换档位）
   window.api.onToast((msg) => showToast(msg));
+  // 设备被拔出/接收器掉线：回到未连接状态并提示
+  window.api.onDisconnected(() => {
+    if (!state.connected) return;
+    state.connected = false;
+    state.modelInfo = null;
+    state.battery = null;
+    state.batteryCharging = false;
+    renderDevice();
+    setDeviceLabel(t('deviceDisconnected'), true);
+    showToast(t('deviceDisconnected'));
+  });
   $('#applyBtn').addEventListener('click', onApply);
   $('#addDpiBtn').addEventListener('click', onAddDpi);
   // 配置 / 宏 导入导出（官方 .ict / .icm 格式）
