@@ -57,12 +57,16 @@ function toggleSettingsMenu() {
   $('#settingsMenu').classList.toggle('hidden');
 }
 
-/** 更新设置项（开机自启 / 静默启动） */
-async function onSettingChange(patch) {
+/** 更新设置项（开机自启 / 静默启动），成功/失败都弹提示 */
+async function onSettingChange(patch, labelKey, enabled) {
   try {
     await window.api.setSettings(patch);
+    if (labelKey) {
+      const tpl = enabled ? t('settingEnabled') : t('settingDisabled');
+      showToast(tpl.replace('{n}', t(labelKey)));
+    }
   } catch (_) {
-    /* 设置失败静默 */
+    showToast(t('settingSaveFailed'));
   }
   syncSilentAvailability();
 }
@@ -121,8 +125,10 @@ function bindEvents() {
   });
   // 设置面板
   $('#settingsBtn').addEventListener('click', toggleSettingsMenu);
-  $('#setAutoLaunch').addEventListener('change', (e) => onSettingChange({ autoLaunch: e.target.checked }));
-  $('#setSilentStart').addEventListener('change', (e) => onSettingChange({ silentStart: e.target.checked }));
+  $('#setAutoLaunch').addEventListener('change', (e) =>
+    onSettingChange({ autoLaunch: e.target.checked }, 'settingsAutoLaunch', e.target.checked));
+  $('#setSilentStart').addEventListener('change', (e) =>
+    onSettingChange({ silentStart: e.target.checked }, 'settingsSilentStart', e.target.checked));
   // 点击别处关闭语言/设置菜单
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.lang-wrap')) {
