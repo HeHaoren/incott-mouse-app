@@ -264,7 +264,7 @@ function registerIpc() {
 
   ipcMain.handle('mouse:open', async (_e, pathArg) => {
     if (device) device.close();
-    device = hid.openDevice(pathArg);
+    device = await hid.openDevice(pathArg); // 失败会自动重新枚举重试一次（设备切换模式后路径会变）
     deviceInfo = await readDeviceInfo(); // 连接即识别型号/传感器/8K 接收器（失败为 null）
     // 监听设备主动上报（官方电量的主通道）：电量/充电/回报率/DPI 变化时推送
     device.onData((buf) => {
@@ -290,6 +290,8 @@ function registerIpc() {
     if (device) device.close();
     device = null;
     deviceInfo = null;
+    lastPushDpi = null;
+    hid.invalidateCache(); // 断开后设备可能已换模式，下次连接必须重新枚举
     updateTrayBattery(null); // 托盘电量归零为「未连接」
     return deviceState();
   });

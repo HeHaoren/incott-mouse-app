@@ -241,7 +241,11 @@ async function onConnect() {
     hideSpinner();
   } catch (e) {
     hideSpinner();
-    setDeviceLabel(t('connectFailed') + e.message, true);
+    // 去掉 Electron IPC 包装前缀，只显示真正的原因
+    const msg = String(e && e.message ? e.message : e)
+      .replace(/^Error invoking remote method '[^']+':\s*/, '')
+      .replace(/^Error:\s*/, '');
+    setDeviceLabel(t('connectFailed') + msg, true);
   }
 }
 

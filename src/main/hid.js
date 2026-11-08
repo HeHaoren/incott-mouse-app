@@ -19,7 +19,16 @@ const P = require('../shared/protocol');
 
 // ── 设备缓存与枚举 ──────────────────────────────────────────
 let deviceCache = null; // 枚举结果缓存
+let cacheAt = 0; // 缓存时间戳
 let enumeratePromise = null; // 进行中的枚举 Promise
+const CACHE_TTL_MS = 10000; // 缓存有效期：切换 8K/有线无线模式会让设备重新枚举，旧路径会失效
+
+/** 丢弃枚举缓存（设备重新枚举后必须调用，否则会拿旧路径开设备 → 0x2 文件未找到） */
+function invalidateCache() {
+  deviceCache = null;
+  cacheAt = 0;
+  enumeratePromise = null;
+}
 
 /**
  * 判断是否无线（已知无线 PID 0x522C，或 product 名含 wireless）。
@@ -56,10 +65,11 @@ function filterDevices(devices) {
 
 /**
  * 异步枚举设备（在 worker 线程中执行，不阻塞主进程）。
- * 首次调用启动 worker，结果缓存；后续调用直接返回缓存。
+ * 结果带 TTL 缓存；force=true 时强制重新枚举（设备换模式/插拔后路径会变）。
  */
-function listDevicesAsync() {
-  if (deviceCache) return Promise.resolve(deviceCache);
+function listDevicesAsync(force = false) {
+  if (force) invalidateCache();
+  if (deviceCache && Date.now() - cacheAt < CACHE_TTL_MS) return Promise.resolve(deviceCache);
   if (enumeratePromise) return enumeratePromise;
 
   // 打包后 Electron 把 node-hid 放进 app.asar(.unpacked)，Worker eval 内部的
@@ -89,14 +99,21 @@ function listDevicesAsync() {
     worker.on('message', (msg) => {
       if (msg.ok) {
         deviceCache = filterDevices(msg.devices);
+        cacheAt = Date.now();
+        enumeratePromise = null;
         resolve(deviceCache);
       } else {
+        enumeratePromise = null;
         reject(new Error(msg.error));
       }
     });
-    worker.on('error', (e) => reject(e));
+    worker.on('error', (e) => {
+      enumeratePromise = null;
+      reject(e);
+    });
     worker.on('exit', (code) => {
       if (code !== 0 && !deviceCache) {
+        enumeratePromise = null;
         reject(new Error(`枚举 worker 退出码 ${code}`));
       }
     });
@@ -113,6 +130,7 @@ function prewarm() {
 
 /**
  * 同步枚举（保留兼容；会阻塞，优先用 listDevicesAsync）。
+ * 注意：只返回已有缓存或本次同步枚举结果，不保证新鲜度。
  */
 function listDevices() {
   if (deviceCache) return deviceCache;
@@ -186,32 +204,60 @@ class MouseDevice {
  * 多接口场景：插线充电时 0xFF05 会出现 Col01/Col02 两个接口，
  * Col01 发送 Feature Report 会失败（返回错误数据），必须用 Col02。
  * 这里逐个尝试（Col02 优先，即枚举靠后的接口），选第一个能通信的。
+ *
+ * 设备切换 8K/有线无线模式后会重新枚举，接口路径全部变化（旧路径打开报 0x2
+ * ERROR_FILE_NOT_FOUND）。因此缓存全部失败时强制重新枚举并重试一次，
+ * 用户无需手动插拔。
  */
-function openDevice(path) {
-  if (path) {
-    return new MouseDevice(path);
-  }
-  const list = listDevices();
-  if (list.length === 0) {
-    throw new Error('未找到 Incott 鼠标（VID 0x093A）');
-  }
-  let lastErr = null;
-  for (const d of [...list].reverse()) {
-    try {
-      const dev = new MouseDevice(d.path);
-      // 探测通信：Col01 在此抛错（HidD_SetFeature 失败）
-      dev.sendFeatureReport(P.buildReadBattery());
-      return dev;
-    } catch (e) {
-      lastErr = e;
+async function openDevice(path) {
+  const attempt = (list) => {
+    let lastErr = null;
+    for (const d of list) {
+      let dev = null;
+      try {
+        dev = new MouseDevice(d.path);
+        // 探测通信：Col01 在此抛错（HidD_SetFeature 失败）
+        dev.sendFeatureReport(P.buildReadBattery());
+        return { dev };
+      } catch (e) {
+        if (dev) dev.close();
+        lastErr = e;
+      }
     }
+    return { dev: null, err: lastErr };
+  };
+
+  // 第一轮：用当前缓存（无 path 时倒序优先 Col02）；缓存为空则直接走重新枚举
+  const cached = deviceCache || [];
+  const first = path
+    ? cached.filter((d) => d.path === path)
+    : [...cached].reverse();
+  if (path && first.length === 0) first.push({ path }); // 指定 path 但不在缓存里，直接试
+
+  if (first.length) {
+    const r1 = attempt(first);
+    if (r1.dev) return r1.dev;
   }
-  throw lastErr || new Error('所有接口均无法通信');
+
+  // 第二轮：缓存可能已过期（设备重新枚举）→ 强制刷新后重试
+  invalidateCache();
+  const fresh = await listDevicesAsync(true);
+  if (fresh.length === 0) {
+    throw new Error('未找到 Incott 鼠标（VID 0x093A），请确认已插好或接收器在线');
+  }
+  const second = path ? fresh.filter((d) => d.path === path) : [...fresh].reverse();
+  const r2 = attempt(second.length ? second : [...fresh].reverse());
+  if (r2.dev) return r2.dev;
+
+  throw new Error(
+    `无法打开鼠标${r2.err ? `（${String(r2.err.message || r2.err).slice(0, 120)}）` : ''}——设备可能刚切换模式仍在重新枚举，请稍等 2 秒重试`
+  );
 }
 
 module.exports = {
   listDevices,
   listDevicesAsync,
+  invalidateCache,
   prewarm,
   openDevice,
   MouseDevice,
