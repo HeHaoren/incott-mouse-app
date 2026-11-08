@@ -48,37 +48,40 @@ function saveSettings(s) {
 }
 
 function getSettings() {
+  const s = loadSettings();
   return {
     autoLaunch: !!app.getLoginItemSettings().openAtLogin,
-    startMinimized: !!loadSettings().startMinimized,
+    // 兼容旧键 startMinimized（0.2.1 及更早）
+    silentStart: !!(s.silentStart != null ? s.silentStart : s.startMinimized),
   };
 }
 
-/** 开机自启：带 --background 参数时静默启动（不弹窗），手动运行 exe 总是弹窗 */
+/** 开机自启：注册表 Run 项；静默启动时附加 --background（启动后只驻留托盘、不弹窗） */
 function applyLoginItem() {
   const s = loadSettings();
   const autoLaunch = !!app.getLoginItemSettings().openAtLogin;
   if (autoLaunch) {
     app.setLoginItemSettings({
       openAtLogin: true,
-      args: s.startMinimized ? ['--background'] : [],
+      args: getSettings().silentStart ? ['--background'] : [],
     });
   }
 }
 
 function setSettings(patch) {
   const s = loadSettings();
-  if (patch.autoLaunch != null) {
-    app.setLoginItemSettings({
-      openAtLogin: !!patch.autoLaunch,
-      args: s.startMinimized ? ['--background'] : [],
-    });
+  if (s.silentStart == null && s.startMinimized != null) {
+    s.silentStart = s.startMinimized; // 旧配置迁移
+    delete s.startMinimized;
   }
-  if (patch.startMinimized != null) {
-    s.startMinimized = !!patch.startMinimized;
+  if (patch.autoLaunch != null) {
+    app.setLoginItemSettings({ openAtLogin: !!patch.autoLaunch });
+  }
+  if (patch.silentStart != null) {
+    s.silentStart = !!patch.silentStart;
   }
   saveSettings(s);
-  applyLoginItem(); // startMinimized 变化时同步更新自启参数
+  applyLoginItem(); // 两个开关都会影响自启参数，统一同步
   return getSettings();
 }
 

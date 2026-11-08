@@ -57,13 +57,22 @@ function toggleSettingsMenu() {
   $('#settingsMenu').classList.toggle('hidden');
 }
 
-/** 更新设置项（开机自启 / 启动后台保留） */
+/** 更新设置项（开机自启 / 静默启动） */
 async function onSettingChange(patch) {
   try {
     await window.api.setSettings(patch);
   } catch (_) {
     /* 设置失败静默 */
   }
+  syncSilentAvailability();
+}
+
+/** 静默启动只在开机自启开启时才有意义，未开自启时置灰 */
+function syncSilentAvailability() {
+  const auto = $('#setAutoLaunch').checked;
+  const silent = $('#setSilentStart');
+  silent.disabled = !auto;
+  silent.closest('.settings-item').style.opacity = auto ? '' : '0.45';
 }
 
 /** 读取设置并回填开关 */
@@ -71,7 +80,8 @@ async function loadSettings() {
   try {
     const s = await window.api.getSettings();
     $('#setAutoLaunch').checked = !!s.autoLaunch;
-    $('#setStartMinimized').checked = !!s.startMinimized;
+    $('#setSilentStart').checked = !!s.silentStart;
+    syncSilentAvailability();
   } catch (_) {
     /* 读设置失败静默 */
   }
@@ -112,7 +122,7 @@ function bindEvents() {
   // 设置面板
   $('#settingsBtn').addEventListener('click', toggleSettingsMenu);
   $('#setAutoLaunch').addEventListener('change', (e) => onSettingChange({ autoLaunch: e.target.checked }));
-  $('#setStartMinimized').addEventListener('change', (e) => onSettingChange({ startMinimized: e.target.checked }));
+  $('#setSilentStart').addEventListener('change', (e) => onSettingChange({ silentStart: e.target.checked }));
   // 点击别处关闭语言/设置菜单
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.lang-wrap')) {

@@ -26,11 +26,17 @@
         <div id="settingsMenu" class="settings-menu hidden">
           <label class="settings-item">
             <input type="checkbox" id="setAutoLaunch" />
-            <span data-i18n="settingsAutoLaunch">开机自启</span>
+            <span class="settings-text">
+              <span data-i18n="settingsAutoLaunch">开机自启</span>
+              <span class="settings-desc" data-i18n="settingsAutoLaunchDesc">登录 Windows 后自动运行</span>
+            </span>
           </label>
           <label class="settings-item">
-            <input type="checkbox" id="setStartMinimized" />
-            <span data-i18n="settingsStartMinimized">启动后后台保留</span>
+            <input type="checkbox" id="setSilentStart" />
+            <span class="settings-text">
+              <span data-i18n="settingsSilentStart">静默启动</span>
+              <span class="settings-desc" data-i18n="settingsSilentStartDesc">启动时不弹窗，只驻留托盘</span>
+            </span>
           </label>
         </div>
       </div>

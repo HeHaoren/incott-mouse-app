@@ -115,6 +115,8 @@ body {
 }
 .settings-item:hover { background: var(--bg-card); color: var(--text); }
 .settings-item input { accent-color: var(--accent); }
+.settings-text { display: flex; flex-direction: column; gap: 2px; }
+.settings-desc { font-size: 11px; color: var(--text-dim); opacity: .75; line-height: 1.3; }
 
 /* ── 按钮 ─────────────────────────── */
 .btn {
