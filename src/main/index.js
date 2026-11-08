@@ -267,17 +267,21 @@ function isDeviceGoneError(e) {
 
 /**
  * 设备拔出/掉线：清理状态、托盘复位、通知渲染层回到未连接。
- * 由 node-hid 的 error 事件或读写异常触发。
+ * @param err          底层错误
+ * @param sourceDevice 触发错误的具体设备实例；只有它仍是当前设备时才处理，
+ *                     避免旧句柄的迟到错误把刚建立的新连接误清掉
  */
-function handleDeviceGone(err) {
+function handleDeviceGone(err, sourceDevice) {
   if (!device) return; // 已处理过，避免重复
+  if (sourceDevice && sourceDevice !== device) return; // 旧实例的迟到错误，忽略
   console.warn('[hid] 设备已断开:', String((err && err.message) || err || ''));
+  const dead = device;
+  device = null; // 先置空，防止重入时误伤新连接
   try {
-    device.close();
+    dead.close();
   } catch (_) {
     /* 句柄可能已失效 */
   }
-  device = null;
   deviceInfo = null;
   lastPushDpi = null;
   hid.invalidateCache(); // 重新插上后接口路径可能变化
@@ -292,11 +296,12 @@ function handleDeviceGone(err) {
  */
 async function withDevice(fn) {
   if (!device) throw new Error('设备未连接，请先连接鼠标');
+  const dev = device;
   try {
-    return await fn(device);
+    return await fn(dev);
   } catch (e) {
     if (isDeviceGoneError(e)) {
-      handleDeviceGone(e);
+      handleDeviceGone(e, dev);
       throw new Error('鼠标已断开（被拔出或接收器掉线），请重新连接');
     }
     throw e;
@@ -310,7 +315,8 @@ function registerIpc() {
   ipcMain.handle('mouse:open', async (_e, pathArg) => {
     if (device) device.close();
     device = await hid.openDevice(pathArg); // 失败会自动重新枚举重试一次（设备切换模式后路径会变）
-    device.onError((e) => handleDeviceGone(e)); // 拔出/接收器掉线：更新状态不弹未捕获异常
+    const opened = device;
+    device.onError((e) => handleDeviceGone(e, opened)); // 拔出/接收器掉线：仅当前设备才处理
     deviceInfo = await readDeviceInfo(); // 连接即识别型号/传感器/8K 接收器（失败为 null）
     // 监听设备主动上报（官方电量的主通道）：电量/充电/回报率/DPI 变化时推送
     device.onData((buf) => {

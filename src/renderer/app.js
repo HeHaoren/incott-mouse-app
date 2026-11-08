@@ -249,6 +249,7 @@ async function onConnect() {
     renderDpi();
     await refreshBattery();
     setDeviceLabel(st.isWireless ? t('connectedWireless') : t('connectedWired'));
+    hideToast(); // 清掉可能残留的「已断开」提示
     hideSpinner();
   } catch (e) {
     hideSpinner();
@@ -366,6 +367,14 @@ function showToast(msg) {
   el.classList.remove('hidden');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+/** 立即收起 toast（连接成功等场景） */
+function hideToast() {
+  const el = $('#toast');
+  if (!el) return;
+  clearTimeout(toastTimer);
+  el.classList.add('hidden');
 }
 
 function renderBattery() {
