@@ -13,7 +13,7 @@ Incott（因科特）鼠标桌面配置工具，Electron + node-hid，不依赖�
 ## Git / 推送（本机网络特殊）
 - 远程 `origin https://github.com/HeHaoren/incott-mouse-app.git`，分支 master；gh CLI 已登录 HeHaoren
 - **本机 DNS 把 github.com 解析到 20.205.243.166（被墙，TCP 不通）**，而 140.82.112.3/113.3/114.3/116.3 与 api.github.com 可直连；沙箱代理 127.0.0.1:11445 对 github.com 返回 502
-- 推送可用：`git -c http.curloptResolve=github.com:443:140.82.114.3 -c http.proxy= -c https.proxy= push origin master`（需在沙箱外执行）
+- 推送可用：`git -c http.curloptResolve=github.com:443:<IP> -c http.proxy= -c https.proxy= push origin master`（需在沙箱外执行）；IP 会变动，按 140.82.113.3 → 112.3 → 114.3 → 116.3 依次试（2026-11-08 实测 113.3 可用、114.3 已不稳定）
 - 无本地 SSH key；gh token 无 admin:public_key scope
 
 ## 协议关键事实（实机验证过，勿凭印象改）
