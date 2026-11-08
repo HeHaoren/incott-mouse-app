@@ -292,7 +292,7 @@ body {
 .apply-status.ok { color: var(--green); }
 .apply-status.err { color: var(--red); }
 
-/* Toast 提示（DPI 切换 / 电量查询反馈） */
+/* Toast 提示（DPI 切换 / 电量查询反馈）：快速淡入淡出 */
 .toast {
   position: fixed;
   right: 20px;
@@ -305,12 +305,16 @@ body {
   color: var(--text);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   z-index: 999;
-  animation: toast-in 0.18s ease-out;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 0.14s ease-out, transform 0.14s ease-out;
 }
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+.toast.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
+.toast.hidden { display: none; }
 
 /* ── 宏编辑器 ──────────────────────── */
 .macro-slots { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }

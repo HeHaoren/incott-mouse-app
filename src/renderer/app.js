@@ -359,22 +359,28 @@ async function onBatteryClick() {
 
 // ── Toast ──────────────────────────────────────────────────
 let toastTimer = null;
+let toastHideTimer = null;
 
 function showToast(msg) {
   const el = $('#toast');
   if (!el) return;
   el.textContent = msg;
   el.classList.remove('hidden');
+  void el.offsetWidth; // 强制重排，保证 display:none → 显示时过渡生效
+  el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+  clearTimeout(toastHideTimer);
+  toastTimer = setTimeout(hideToast, 2000); // 2 秒后自动消失
 }
 
-/** 立即收起 toast（连接成功等场景） */
+/** 淡出后隐藏（快速收起，连接成功等场景也用它清残留） */
 function hideToast() {
   const el = $('#toast');
   if (!el) return;
   clearTimeout(toastTimer);
-  el.classList.add('hidden');
+  el.classList.remove('show');
+  clearTimeout(toastHideTimer);
+  toastHideTimer = setTimeout(() => el.classList.add('hidden'), 160);
 }
 
 function renderBattery() {
