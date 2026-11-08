@@ -131,6 +131,13 @@ test('parseStatusPush 解析设备主动上报', () => {
   assert.equal(P.parseStatusPush(null), null);
 });
 
+test('接收器灯效命令（8K 接收器）', () => {
+  assert.deepEqual([...P.buildSetReceiverLed(0)], [8, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildSetReceiverLed(2)], [8, 2, 0, 0, 0, 0, 0, 0]);
+  assert.equal(P.LED_MODE_TABLE.length, 3);
+  assert.throws(() => P.buildSetReceiverLed(3), RangeError); // 只有 0/1/2 三档
+});
+
 test('读取命令构造', () => {
   assert.deepEqual([...P.buildReadDpiLevel()], [131, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildReadBattery()], [137, 0, 0, 0, 0, 0, 0, 0]);

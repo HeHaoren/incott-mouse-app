@@ -187,7 +187,19 @@
       <!-- 灯效 -->
       <section id="tab-lighting" class="tab">
         <div class="tab-header"><h2 data-i18n="lightingTitle">灯效</h2></div>
-        <p class="hint" data-i18n="lightingHint">RGB 灯效设置（后续版本完善）。</p>
+        <p class="hint" data-i18n="lightingHint">设置 8K 接收器的指示灯模式，直观显示当前回报率或电量。</p>
+        <div class="perf-grid">
+          <div class="perf-card">
+            <h3 data-i18n="ledReceiverTitle">接收器指示灯</h3>
+            <div id="ledList" class="rate-list"></div>
+            <div id="ledDesc" class="opt-desc"></div>
+            <div id="ledNote" class="opt-desc warn"></div>
+          </div>
+          <div class="perf-card">
+            <h3 data-i18n="ledBodyTitle">鼠标本体灯效</h3>
+            <div class="opt-desc" data-i18n="ledBodyUnsupported">本型号本体 RGB 的 HID 命令未包含在官方网页驱动中（官方仅原生驱动支持），暂无法通过本工具设置。</div>
+          </div>
+        </div>
       </section>
     </main>
   </div>

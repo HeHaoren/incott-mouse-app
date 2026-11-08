@@ -247,6 +247,7 @@ function getConstants() {
   return {
     rateTable: P.RATE_TABLE,
     lodTable: P.LOD_TABLE,
+    ledModeTable: P.LED_MODE_TABLE,
     mouseKeys: Object.keys(P.MOUSE_KEYS),
     mediaKeys: Object.keys(P.MEDIA_KEYS),
     modifiers: P.MODIFIERS,

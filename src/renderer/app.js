@@ -26,6 +26,7 @@ const state = {
   motionSync: false,
   debounce: 8,
   sleepTime: 600,
+  receiverLed: 0, // 接收器指示灯模式 0=回报率 1=电量 2=仅低电量
   profile: 0,
   buttons: [], // [{ type: 'mouse'|'keyboard'|'media'|'macro', value }]
   macros: [], // [{ slot, name, loopType, cycle, items: [{press, keyCode, delay}] }]
@@ -262,6 +263,16 @@ async function onConnect() {
     } catch (e) {
       /* 读档位失败不阻塞连接 */
     }
+    // 8K 接收器：读当前指示灯模式（读不到不阻塞，保持默认）
+    if (state.modelInfo && state.modelInfo.is8KReceiver) {
+      try {
+        const led = await window.api.read('receiverLed');
+        if (typeof led === 'number' && led >= 0 && led <= 2) state.receiverLed = led;
+      } catch (_) {
+        /* 该固件可能不支持回读 */
+      }
+    }
+    renderLighting();
     renderDpi();
     await refreshBattery();
     setDeviceLabel(st.isWireless ? t('connectedWireless') : t('connectedWired'));
@@ -291,6 +302,7 @@ function applyModelInfo(info) {
   // 非 8K 接收器时高回报率不可选，当前值超限则回落
   if (info && !info.is8KReceiver && state.rate > 1000) state.rate = 1000;
   renderPerformance();
+  renderLighting();
 }
 
 function showSpinner() {
@@ -602,6 +614,34 @@ function renderPerformance() {
     });
     lodList.appendChild(chip);
   });
+}
+
+// ── 灯效（接收器指示灯）─────────────────────────────────────
+const LED_DESC_KEYS = { 0: 'ledRateDesc', 1: 'ledBatteryDesc', 2: 'ledLowBatteryDesc' };
+
+function renderLighting() {
+  if (!state.constants || !state.constants.ledModeTable) return;
+  const list = $('#ledList');
+  const note = $('#ledNote');
+  const desc = $('#ledDesc');
+  if (!list) return;
+  // 仅 8K 接收器支持（实机验证命令 8 只对 8K 接收器有效）
+  const supported = !!(state.modelInfo && state.modelInfo.is8KReceiver);
+  list.innerHTML = '';
+  state.constants.ledModeTable.forEach((m) => {
+    const chip = document.createElement('button');
+    chip.className = 'rate-chip' + (m.value === state.receiverLed ? ' selected' : '');
+    chip.textContent = t(m.key);
+    chip.disabled = !supported;
+    chip.style.opacity = supported ? '' : '0.45';
+    chip.addEventListener('click', () => {
+      state.receiverLed = m.value;
+      renderLighting();
+    });
+    list.appendChild(chip);
+  });
+  if (desc) desc.textContent = supported ? t(LED_DESC_KEYS[state.receiverLed] || 'ledRateDesc') : '';
+  if (note) note.textContent = supported ? '' : t('ledNeed8K');
 }
 
 // ── Profile ────────────────────────────────────────────────
@@ -916,6 +956,11 @@ function buildApplyOps() {
   // Profile
   ops.push({ action: 'setProfile', args: [state.profile] });
 
+  // 接收器指示灯（仅 8K 接收器）
+  if (state.modelInfo && state.modelInfo.is8KReceiver) {
+    ops.push({ action: 'setReceiverLed', args: [state.receiverLed] });
+  }
+
   return ops;
 }
 
@@ -936,7 +981,7 @@ function buildProfileExport() {
     motionSync: state.motionSync,
     debounce: state.debounce,
     sleepTime: state.sleepTime,
-    receiverLed: 0,
+    receiverLed: state.receiverLed,
     currentDpi: state.currentDpi,
     dpiLevels: state.dpiLevels,
     buttons: state.buttons,
@@ -985,6 +1030,7 @@ function applyImportedProfile(p) {
       Math.abs(b - p.sleepTime) < Math.abs(a - p.sleepTime) ? b : a);
   }
   if (Array.isArray(p.buttons) && p.buttons.length === 6) state.buttons = p.buttons;
+  if (p.receiverLed != null) state.receiverLed = clamp(p.receiverLed, 0, 2);
   // 非 8K 接收器回落超范围回报率
   if (state.modelInfo && !state.modelInfo.is8KReceiver && state.rate > 1000) state.rate = 1000;
 }
@@ -1043,6 +1089,7 @@ function loadLocalConfig() {
       if (saved.motionSync != null) state.motionSync = saved.motionSync;
       if (saved.debounce != null) state.debounce = saved.debounce;
       if (saved.sleepTime != null) state.sleepTime = saved.sleepTime;
+      if (saved.receiverLed != null) state.receiverLed = saved.receiverLed;
       if (saved.profile != null) state.profile = saved.profile;
       if (Array.isArray(saved.buttons)) state.buttons = saved.buttons;
       if (Array.isArray(saved.macros)) state.macros = saved.macros;
@@ -1093,6 +1140,7 @@ function saveLocalConfig() {
     debounce: state.debounce,
     sleepTime: state.sleepTime,
     profile: state.profile,
+    receiverLed: state.receiverLed,
     buttons: state.buttons,
     macros: state.macros,
     currentMacro: state.currentMacro,
@@ -1103,6 +1151,7 @@ function renderAll() {
   renderDevice();
   renderDpi();
   renderPerformance();
+  renderLighting();
   renderProfile();
   renderButtons();
   initMacroKeySelect();

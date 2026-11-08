@@ -316,8 +316,18 @@ function buildMacroBlock(totalBlocks, blockIndex, slotId) {
   return cmd(7, totalBlocks, blockIndex, 32, slotId);
 }
 
-/** 接收器 LED：[8, mode] */
+/** 接收器 LED 模式表（8K 接收器专用，命令 8；官方 UI 为 3 个选项） */
+const LED_MODE_TABLE = [
+  { value: 0, key: 'ledRate' }, // 回报率指示
+  { value: 1, key: 'ledBattery' }, // 电量指示
+  { value: 2, key: 'ledLowBattery' }, // 仅低电量警告
+];
+
+/** 接收器 LED：[8, mode]，mode 取 LED_MODE_TABLE 的 value */
 function buildSetReceiverLed(mode) {
+  if (!LED_MODE_TABLE.some((m) => m.value === mode)) {
+    throw new RangeError(`不支持的接收器灯效: ${mode}`);
+  }
   return cmd(8, mode);
 }
 
@@ -449,6 +459,7 @@ module.exports = {
   SENSOR,
   RATE_TABLE,
   LOD_TABLE,
+  LED_MODE_TABLE,
   LOD_HW_3950,
   MODEL_TABLE,
   KEY_MATRIX,
