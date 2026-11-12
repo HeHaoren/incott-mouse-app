@@ -50,12 +50,26 @@ function applyI18n() {
 
 /** 展开/收起语言菜单 */
 function toggleLangMenu() {
-  $('#langMenu').classList.toggle('hidden');
+  const menu = $('#langMenu');
+  const opening = menu.classList.contains('hidden');
+  if (opening) $('#settingsMenu').classList.add('hidden');
+  menu.classList.toggle('hidden');
+  if (opening) {
+    const first = menu.querySelector('.lang-option');
+    if (first) first.focus();
+  }
 }
 
 /** 展开/收起设置面板 */
 function toggleSettingsMenu() {
-  $('#settingsMenu').classList.toggle('hidden');
+  const menu = $('#settingsMenu');
+  const opening = menu.classList.contains('hidden');
+  if (opening) $('#langMenu').classList.add('hidden');
+  menu.classList.toggle('hidden');
+  if (opening) {
+    const first = menu.querySelector('input');
+    if (first) first.focus();
+  }
 }
 
 /** 更新设置项（开机自启 / 静默启动），成功/失败都弹提示 */
@@ -95,6 +109,7 @@ async function loadSettings() {
 /** 选择语言 */
 function selectLang(lang) {
   $('#langMenu').classList.add('hidden');
+  $('#langBtn').focus();
   if (lang === window.i18n.getLang()) return;
   window.i18n.setLang(lang);
   applyI18n();
@@ -139,6 +154,27 @@ function bindEvents() {
       $('#settingsMenu').classList.add('hidden');
     }
   });
+  // 菜单键盘焦点：Esc 关闭并归还焦点，Tab 移出菜单区时关闭
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('#langMenu').classList.contains('hidden')) {
+      $('#langMenu').classList.add('hidden');
+      $('#langBtn').focus();
+    } else if (!$('#settingsMenu').classList.contains('hidden')) {
+      $('#settingsMenu').classList.add('hidden');
+      $('#settingsBtn').focus();
+    }
+  });
+  document.addEventListener('focusout', (e) => {
+    const to = e.relatedTarget;
+    [['#langMenu', '.lang-wrap'], ['#settingsMenu', '.settings-wrap']].forEach(([menuSel, wrapSel]) => {
+      const menu = $(menuSel);
+      if (menu.classList.contains('hidden')) return;
+      if (e.target.closest(menuSel) && (!to || !(to instanceof Element) || !to.closest(wrapSel))) {
+        menu.classList.add('hidden');
+      }
+    });
+  });
   if (window.i18n.onLangChanged) {
     window.i18n.onLangChanged(() => {
       applyI18n();
@@ -154,6 +190,12 @@ function bindEvents() {
   // 连接
   $('#connectBtn').addEventListener('click', onConnect);
   $('#battery').addEventListener('click', onBatteryClick);
+  $('#battery').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onBatteryClick();
+    }
+  });
   // 设备主动上报的电量（官方主通道：推送即更新）
   window.api.onBattery(({ level, charging }) => {
     state.battery = level;
@@ -234,6 +276,7 @@ async function onConnect() {
     state.battery = null;
     state.batteryCharging = false;
     renderDevice();
+    setDeviceLabel(t('notConnected'));
     return;
   }
   showSpinner();
@@ -328,8 +371,10 @@ async function refreshDeviceState() {
 }
 
 function setDeviceLabel(text, isErr = false) {
-  $('#deviceLabel').textContent = text;
-  $('#deviceLabel').style.color = isErr ? 'var(--red)' : '';
+  const el = $('#deviceLabel');
+  el.textContent = text;
+  el.title = text;
+  el.style.color = isErr ? 'var(--red)' : '';
 }
 
 /** 顶栏显示型号 · 传感器 · 8K（来自 0x8F 型号信息，读不到则隐藏） */
@@ -450,6 +495,9 @@ function renderDpi() {
   state.dpiLevels.forEach((lv, i) => {
     const card = document.createElement('div');
     card.className = 'dpi-card' + (i === state.currentDpi ? ' current' : '');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-pressed', i === state.currentDpi ? 'true' : 'false');
 
     const idx = document.createElement('div');
     idx.className = 'dpi-index';
@@ -471,6 +519,9 @@ function renderDpi() {
     color.value = lv.color;
     color.addEventListener('input', (e) => {
       state.dpiLevels[i].color = e.target.value;
+      card.querySelectorAll('.dpi-slider').forEach((slider) => {
+        slider.style.accentColor = e.target.value;
+      });
     });
 
     const rm = document.createElement('button');
@@ -488,6 +539,16 @@ function renderDpi() {
           e.target.closest('.dpi-value-input') || e.target.closest('.dpi-slider')) return;
       state.currentDpi = i;
       renderDpi();
+    });
+    card.addEventListener('keydown', (e) => {
+      if (e.target !== card) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        state.currentDpi = i;
+        renderDpi();
+        const cards = $('#dpiList').querySelectorAll('.dpi-card');
+        if (cards[i]) cards[i].focus();
+      }
     });
 
     list.appendChild(card);
@@ -868,9 +929,13 @@ async function onMacroUpload() {
     flashMacroStatus(t('pleaseConnect'), true);
     return;
   }
+  const btn = $('#macroUploadBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
   const m = state.macros[state.currentMacro];
   const status = $('#macroStatus');
   status.textContent = t('uploading');
+  status.title = status.textContent;
   status.className = 'apply-status';
   try {
     await window.api.uploadMacro({
@@ -880,19 +945,39 @@ async function onMacroUpload() {
       items: m.items.map((it) => ({ press: it.press, keyCode: it.keyCode, delay: it.delay })),
     });
     status.textContent = t('uploaded');
+    status.title = status.textContent;
     status.className = 'apply-status ok';
+    clearTimeout(macroStatusTimer);
+    macroStatusTimer = setTimeout(() => {
+      status.textContent = '';
+      status.title = '';
+      status.className = 'apply-status';
+    }, 4000);
     saveLocalConfig();
   } catch (e) {
     status.textContent = t('uploadFailed') + e.message;
+    status.title = status.textContent;
     status.className = 'apply-status err';
+  } finally {
+    btn.disabled = !state.connected;
   }
 }
 
+let macroStatusTimer = null;
+
 function flashMacroStatus(text, isErr) {
   const s = $('#macroStatus');
+  clearTimeout(macroStatusTimer);
   s.textContent = text;
+  s.title = text;
   s.className = 'apply-status ' + (isErr ? 'err' : '');
-  setTimeout(() => { s.textContent = ''; }, 3000);
+  if (!isErr) {
+    macroStatusTimer = setTimeout(() => {
+      s.textContent = '';
+      s.title = '';
+      s.className = 'apply-status';
+    }, 4000);
+  }
 }
 
 // ── 应用 ───────────────────────────────────────────────────
@@ -901,19 +986,33 @@ async function onApply() {
     flashStatus(t('pleaseConnect'), true);
     return;
   }
+  const btn = $('#applyBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
   const status = $('#applyStatus');
   status.textContent = t('applying');
+  status.title = status.textContent;
   status.className = 'apply-status';
 
   try {
     const ops = buildApplyOps();
     await window.api.apply(ops);
     status.textContent = t('applied');
+    status.title = status.textContent;
     status.className = 'apply-status ok';
+    clearTimeout(applyStatusTimer);
+    applyStatusTimer = setTimeout(() => {
+      status.textContent = '';
+      status.title = '';
+      status.className = 'apply-status';
+    }, 4000);
     saveLocalConfig();
   } catch (e) {
     status.textContent = t('applyFailed') + e.message;
+    status.title = status.textContent;
     status.className = 'apply-status err';
+  } finally {
+    btn.disabled = !state.connected;
   }
 }
 
@@ -1067,11 +1166,21 @@ async function onMacroImport() {
   }
 }
 
+let applyStatusTimer = null;
+
 function flashStatus(text, isErr) {
   const s = $('#applyStatus');
+  clearTimeout(applyStatusTimer);
   s.textContent = text;
+  s.title = text;
   s.className = 'apply-status ' + (isErr ? 'err' : '');
-  setTimeout(() => { s.textContent = ''; }, 3000);
+  if (!isErr) {
+    applyStatusTimer = setTimeout(() => {
+      s.textContent = '';
+      s.title = '';
+      s.className = 'apply-status';
+    }, 4000);
+  }
 }
 
 // ── 本地配置持久化 ─────────────────────────────────────────
