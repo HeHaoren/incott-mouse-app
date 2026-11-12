@@ -43,7 +43,7 @@ npm run dist
 ```
 
 产物在 `dist/`：
-- `Incott Mouse Driver Setup 0.1.0.exe`（NSIS 安装包）
+- `Incott Mouse Driver Setup 1.0.0-preview.1.exe`（NSIS 安装包，1.0 前瞻版）
 - `win-unpacked/Incott Mouse Driver.exe`（免安装版）
 
 ## 目录结构
