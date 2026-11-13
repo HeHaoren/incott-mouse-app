@@ -54,7 +54,36 @@ function bgraToBmp(bitmap, width, height) {
   return buf;
 }
 
-/** 多尺寸 PNG → ICO（Vista+ 支持内嵌 PNG） */
+/** BGRA 位图 → ICO 内嵌的 DIB 条目（含 AND 掩码，兼容所有 Windows shell 路径） */
+function bgraToIconDib(bitmap, width, height) {
+  const header = Buffer.alloc(40);
+  header.writeUInt32LE(40, 0);
+  header.writeInt32LE(width, 4);
+  header.writeInt32LE(height * 2, 8); // XOR + AND 两段
+  header.writeUInt16LE(1, 12);
+  header.writeUInt16LE(32, 14);
+  header.writeUInt32LE(0, 16); // BI_RGB
+
+  const pixels = Buffer.alloc(width * height * 4);
+  let o = 0;
+  for (let y = height - 1; y >= 0; y--) {
+    const row = y * width * 4;
+    for (let x = 0; x < width; x++) {
+      const i = row + x * 4;
+      pixels[o++] = bitmap[i]; // B
+      pixels[o++] = bitmap[i + 1]; // G
+      pixels[o++] = bitmap[i + 2]; // R
+      pixels[o++] = bitmap[i + 3]; // A
+    }
+  }
+
+  const maskStride = (((width + 31) >> 5) << 2);
+  const mask = Buffer.alloc(maskStride * height); // 全 0：靠 alpha 通道做透明
+
+  return Buffer.concat([header, pixels, mask]);
+}
+
+/** 多尺寸 → ICO：≤128 用 DIB（兼容性最好），256 用 PNG（体积小） */
 function buildIco(entries) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
@@ -72,12 +101,12 @@ function buildIco(entries) {
     dir[p + 3] = 0;
     dir.writeUInt16LE(1, p + 4);
     dir.writeUInt16LE(32, p + 6);
-    dir.writeUInt32LE(e.png.length, p + 8);
+    dir.writeUInt32LE(e.data.length, p + 8);
     dir.writeUInt32LE(offset, p + 12);
-    offset += e.png.length;
+    offset += e.data.length;
   });
 
-  return Buffer.concat([header, dir, ...entries.map((e) => e.png)]);
+  return Buffer.concat([header, dir, ...entries.map((e) => e.data)]);
 }
 
 async function capture(win, kind, width, height, extra = {}) {
@@ -128,9 +157,12 @@ app.whenReady().then(async () => {
   const entries = [];
   for (const size of sizes) {
     const img = await capture(win, 'icon', size, size, { size: String(size) });
-    const png = img.toPNG();
-    entries.push({ size, png });
-    if (size === 256) fs.writeFileSync(path.join(OUT, 'icon.png'), png);
+    if (size >= 256) {
+      entries.push({ size, data: img.toPNG() });
+      fs.writeFileSync(path.join(OUT, 'icon.png'), img.toPNG());
+    } else {
+      entries.push({ size, data: bgraToIconDib(img.toBitmap(), size, size) });
+    }
   }
   fs.writeFileSync(path.join(OUT, 'icon.ico'), buildIco(entries));
   console.log('icon.ico', sizes.join('/'));
