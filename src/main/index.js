@@ -450,6 +450,21 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => getSettings());
   ipcMain.handle('settings:set', (_e, patch) => setSettings(patch || {}));
 
+  // 自绘标题栏的窗口控制
+  ipcMain.handle('window:minimize', () => {
+    if (mainWindow) mainWindow.minimize();
+  });
+  ipcMain.handle('window:toggleMaximize', () => {
+    if (!mainWindow) return false;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+    return mainWindow.isMaximized();
+  });
+  ipcMain.handle('window:close', () => {
+    if (mainWindow) mainWindow.close(); // 走既有逻辑：隐藏到托盘
+  });
+  ipcMain.handle('window:isMaximized', () => (mainWindow ? mainWindow.isMaximized() : false));
+
   // 应用信息 / 外链（仅允许 https，防止渲染进程被注入后调用任意协议）
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(),
@@ -672,14 +687,13 @@ function createWindow() {
     minWidth: 860,
     minHeight: 580,
     title: 'Incott Mouse Driver',
-    backgroundColor: '#0B0E14',
-    // 去掉原生标题栏：内容铺到顶部，只保留最小化/最大化/关闭三个按钮（颜色跟随深色主题）
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#12161F',
-      symbolColor: '#B9C4D4',
-      height: 54,
-    },
+    // 全自绘窗口：无原生边框 + 透明底，圆角与描边都由渲染层画
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false, // 透明窗口下 DWM 不画阴影，改由 CSS 描边处理
+    thickFrame: true, // 保留边缘拖拽缩放与 Aero Snap
+    roundedCorners: false, // Windows 11 上也不让系统再叠一层圆角
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -687,6 +701,15 @@ function createWindow() {
       sandbox: false, // 允许 preload require 本地模块（shared/i18n）
     },
   });
+
+  // 最大化状态同步给渲染层（自绘标题栏按钮图标要切换）
+  const sendMaximized = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window:maximized', mainWindow.isMaximized());
+    }
+  };
+  mainWindow.on('maximize', sendMaximized);
+  mainWindow.on('unmaximize', sendMaximized);
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   mainWindow.on('close', (e) => {

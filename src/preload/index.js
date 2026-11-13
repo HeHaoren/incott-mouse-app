@@ -57,6 +57,13 @@ contextBridge.exposeInMainWorld('api', {
   /** 关于对话框 */
   showAbout: () => ipcRenderer.invoke('app:about'),
 
+  /** 窗口控制（自绘标题栏） */
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('window:toggleMaximize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  onMaximizedChange: (cb) => ipcRenderer.on('window:maximized', (_e, v) => cb(v)),
+
   /** 更新设置 */
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
 

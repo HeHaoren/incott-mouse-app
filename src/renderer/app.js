@@ -169,7 +169,27 @@ async function loadAppInfo() {
   }
 }
 
+/** 自绘标题栏：最大化状态与按钮图标同步 */
+function applyMaximized(max) {
+  document.body.classList.toggle('maximized', !!max);
+  const icon = $('#winMaxIcon');
+  if (icon) {
+    icon.innerHTML = max
+      ? '<rect x="3.4" y="4.6" width="4.6" height="4.6" rx="1"/><path d="M5.4 4.6V3.4h3.2v3.2"/>'
+      : '<rect x="3" y="3" width="6" height="6" rx="1"/>';
+  }
+  const btn = $('#winMax');
+  if (btn) btn.title = max ? '还原' : '最大化';
+}
+
 function bindEvents() {
+  // 自绘窗口按钮（原生标题栏已去掉）
+  $('#winMin').addEventListener('click', () => window.api.minimizeWindow());
+  $('#winMax').addEventListener('click', () => window.api.toggleMaximizeWindow());
+  $('#winClose').addEventListener('click', () => window.api.closeWindow());
+  if (window.api.onMaximizedChange) window.api.onMaximizedChange(applyMaximized);
+  window.api.isMaximized().then(applyMaximized);
+
   // 语言切换（图标按钮 + 下拉菜单）
   $('#langBtn').addEventListener('click', toggleLangMenu);
   document.querySelectorAll('.lang-option').forEach((opt) => {
