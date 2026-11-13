@@ -141,7 +141,19 @@ async function loadAppInfo() {
     info = await window.api.getAppInfo();
   } catch (_) { /* 忽略 */ }
   const ver = $('#appVersion');
-  if (ver) ver.textContent = info && info.version ? 'v' + info.version : '';
+  if (ver) {
+    ver.textContent = info && info.version ? 'v' + info.version : '';
+    // 版本号兼作「关于」入口（Windows 已去掉原生菜单栏）
+    ver.setAttribute('role', 'button');
+    ver.setAttribute('tabindex', '0');
+    ver.addEventListener('click', () => window.api.showAbout());
+    ver.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.api.showAbout();
+      }
+    });
+  }
   const link = $('#repoLink');
   if (link) {
     const url = (info && info.homepage) || 'https://github.com/HeHaoren/incott-mouse-app';

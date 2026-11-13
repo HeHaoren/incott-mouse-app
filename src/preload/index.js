@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld('api', {
   /** 用系统浏览器打开 https 链接 */
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
 
+  /** 关于对话框 */
+  showAbout: () => ipcRenderer.invoke('app:about'),
+
   /** 更新设置 */
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
 

@@ -32,6 +32,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 input, select, .apply-status, .device-label, .opt-desc { user-select: text; }
+/* 去掉数字输入框的原生上下箭头（Windows 默认那两个小三角很扎眼） */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; appearance: none; margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 ::selection { background: rgba(146,162,255,.32); color: var(--text); }
 
 :where(button, input, select, [tabindex]):focus-visible {
@@ -67,13 +73,24 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
   .spinner { animation: none; border-top-color: var(--accent); }
 }
 
-/* ── 顶栏 ── */
+/* ── 顶栏（兼作自定义标题栏：可拖动区域 + 为原生窗口按钮留位） ── */
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 0 20px; height: 54px;
   background: var(--bg-elev); border-bottom: 1px solid var(--border);
-  box-shadow: inset 0 -1px 0 rgba(146,162,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), inset 0 -1px 0 rgba(146,162,255,.10);
   flex-shrink: 0;
+  -webkit-app-region: drag;
+  padding-right: 152px; /* 最小化/最大化/关闭 覆盖在右上角 */
+}
+/* 可交互元素必须排除拖动区，否则点不动 */
+.topbar button,
+.topbar .battery,
+.topbar .lang-menu,
+.topbar .settings-menu,
+.topbar .settings-item,
+.topbar input {
+  -webkit-app-region: no-drag;
 }
 .brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .brand-dot {
@@ -286,7 +303,10 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
   font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
   font-variant-numeric: tabular-nums; letter-spacing: .02em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer; border-radius: 4px; padding: 2px 4px; margin: -2px -4px;
+  transition: color var(--t-fast) ease, background-color var(--t-fast) ease;
 }
+.sidebar-ver:hover { color: var(--text); background: rgba(255,255,255,.05); }
 
 .content { flex: 1; min-width: 0; overflow-y: auto; padding: 22px 26px; }
 .tab { display: none; }
@@ -555,7 +575,6 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
   background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
 }
 select option { background: var(--bg-popover); color: var(--text); }
-input[type=number]::-webkit-inner-spin-button { opacity: .35; }
 
 .opt-item { display: grid; grid-template-columns: 47px 1fr; row-gap: 5px; align-items: center; }
 .opt-item .switch-label { grid-column: 1 / -1; }

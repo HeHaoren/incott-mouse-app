@@ -462,6 +462,19 @@ function registerIpc() {
     await shell.openExternal(url);
     return true;
   });
+  // 关于（Windows 去掉了原生菜单栏，这里补回入口）
+  ipcMain.handle('app:about', async () => {
+    const { dialog } = require('electron');
+    await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: i18n.t('menuAbout'),
+      message: `Incott Mouse Driver v${app.getVersion()}`,
+      detail: `${i18n.t('aboutText')}\n\nhttps://github.com/HeHaoren/incott-mouse-app`,
+      buttons: ['OK'],
+      noLink: true,
+    });
+    return true;
+  });
 
   // ── 配置 / 宏 导入导出（官方 .ict / .icm 格式）─────────────
   ipcMain.handle('config:exportProfile', async (_e, profileData) => {
@@ -513,8 +526,14 @@ function registerIpc() {
   });
 }
 
-/** 构建应用菜单（随语言切换重建） */
+/** 构建应用菜单（随语言切换重建）
+ *  Windows 上不挂菜单栏：语言切换、关于、退出在界面和托盘里都有，
+ *  原生菜单条会在顶部多出一条灰色横栏，破坏一体化外观（macOS 保留标准菜单）。 */
 function buildMenu() {
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null);
+    return;
+  }
   const t = i18n.t;
   const template = [
     {
@@ -653,7 +672,14 @@ function createWindow() {
     minWidth: 860,
     minHeight: 580,
     title: 'Incott Mouse Driver',
-    backgroundColor: '#101418',
+    backgroundColor: '#0B0E14',
+    // 去掉原生标题栏：内容铺到顶部，只保留最小化/最大化/关闭三个按钮（颜色跟随深色主题）
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#12161F',
+      symbolColor: '#B9C4D4',
+      height: 54,
+    },
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
