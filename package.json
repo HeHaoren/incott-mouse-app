@@ -1,6 +1,6 @@
 {
   "name": "incott-mouse-app",
-  "version": "1.0.0-preview.1",
+  "version": "1.0.0",
   "description": "Incott 鼠标驱动 - 独立的桌面配置工具（基于逆向的 HID 协议，不依赖网页驱动）",
   "main": "src/main/index.js",
   "author": "Incott Dev",
@@ -53,7 +53,7 @@
       "shortcutName": "Incott Mouse Driver",
       "uninstallDisplayName": "Incott Mouse Driver ${version}",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "Incott-Mouse-Driver-Setup-${version}.${ext}"
+      "artifactName": "Incott-Mouse-Driver-NSIS-${version}.${ext}"
     }
   }
 }

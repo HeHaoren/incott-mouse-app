@@ -9,7 +9,7 @@
 ## 线上地址
 
 - 源码：https://github.com/HeHaoren/incott-mouse-app
-- 安装包：https://github.com/HeHaoren/incott-mouse-app/releases/tag/v0.1.0
+- 安装包：https://github.com/HeHaoren/incott-mouse-app/releases/tag/v1.0.0
 
 ## 已完成功能
 
@@ -96,6 +96,10 @@
 ## 发版流程
 
 ```bash
-npm run dist                          # 打包（产物在 dist/）
-gh release create v0.x.x "dist/Incott Mouse Driver Setup 0.x.x.exe" --title "v0.x.x" --notes "..."
+# 1) 改版本号（package.json + installer/package.json + package-lock.json）
+npm run dist        # 2) 应用 + NSIS 备用包（dist/Incott-Mouse-Driver-NSIS-<ver>.exe）
+npm run setup       # 3) 自绘安装器（dist/Incott-Mouse-Driver-Setup-<ver>.exe，正式分发包）
+gh release create v<ver> "dist/Incott-Mouse-Driver-Setup-<ver>.exe" --title "v<ver>" --notes-file <说明文件>
 ```
+
+`--notes` 里带换行和中文容易被 shell 吃掉，写成文件用 `--notes-file` 更稳。

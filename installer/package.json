@@ -1,7 +1,7 @@
 {
   "name": "incott-mouse-setup",
   "productName": "Incott Mouse Driver Setup",
-  "version": "1.0.0-preview.1",
+  "version": "1.0.0",
   "description": "Incott 鼠标驱动 —— 自绘安装程序",
   "main": "main.js",
   "author": "Incott Dev",
