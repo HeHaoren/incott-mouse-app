@@ -5,3 +5,5 @@ out/
 .rivet/
 _ref/
 .DS_Store
+installer/payload/
+dist-setup*/

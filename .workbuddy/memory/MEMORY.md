@@ -37,6 +37,10 @@ Incott（因科特）鼠标桌面配置工具，Electron + node-hid，不依赖�
 - 宏键 itemdata 官方存宏库 uid，本工具写槽位号（本工具往返无损，官方导入宏键可能解析不到）
 
 ## 代码约定（新增，2026-11-13）
+- 安装器是独立子项目 `installer/`：`npm run setup` = 同步载荷 + 打 portable + 收到 `dist/`；
+  应用本体用 `npm run dist`（产出 NSIS 版留作备用，命名带 `-NSIS-`）
+- 安装器里所有 fs 操作用 `require('original-fs')`（Electron 的 fs 会把 .asar 当目录，复制会 ENOENT）
+- 安装器所有外部程序调用走 `execFileSafe`，失败只降级成警告，绝不中断安装
 - 键位显示名走 `src/shared/keynames.js`（pure，preload 暴露 `window.keynames.keyLabel(kind,value)`）；**协议值永远是原始枚举名**，只翻显示
 - 品牌资产源在 `build/assets-src.html`，`npm run assets` 用 Electron 渲染生成 `build/generated/*`（ico/bmp），改视觉后重跑再 `npm run dist`
 - NSIS 已改 `oneClick:false` + `allowToChangeInstallationDirectory`，产物名 `Incott-Mouse-Driver-Setup-${version}.exe`

@@ -39,12 +39,30 @@ npm test
 ## 打包
 
 ```bash
-npm run dist
+npm run dist     # 应用本体：dist/win-unpacked + NSIS 版安装包（备用）
+npm run setup    # 自绘安装器：dist/Incott-Mouse-Driver-Setup-<版本>.exe
 ```
 
+`npm run setup` 会先把 `dist/win-unpacked` 同步成安装器载荷，再打便携版自解压 exe（约 126 MB）。
+
 产物在 `dist/`：
-- `Incott-Mouse-Driver-Setup-1.0.0-preview.1.exe`（NSIS 安装包，可选安装路径、带品牌侧图）
-- `win-unpacked/Incott Mouse Driver.exe`（免安装版）
+- `Incott-Mouse-Driver-Setup-<版本>.exe` —— **正式安装包**，自绘界面（深色卡片、可选安装路径、自绘进度）
+- `Incott-Mouse-Driver-NSIS-<版本>.exe` —— NSIS 版，外观普通，留作备用
+- `win-unpacked/Incott Mouse Driver.exe` —— 免安装版
+
+## 安装器
+
+`installer/` 是一个独立的小 Electron 应用，不复用 NSIS 的向导外壳：
+
+- 660×436 无边框透明窗口，圆角卡片、自绘最小化/关闭，视觉与主程序同一套
+- 四个状态：选项（安装位置 + 快捷方式）→ 进度 → 完成 → 出错
+- 安装动作：复制载荷、建快捷方式（PowerShell WScript.Shell）、写 `HKCU` 卸载注册表项
+- 卸载：注册表里的 `UninstallString` 指向装好的主程序 `--uninstall`，
+  由程序自己删除快捷方式、注册表项并调度目录删除
+
+```bash
+npm run assets   # 顺带生成 installer/assets/splash.bmp（便携版解包时的闪屏）
+```
 
 ## 品牌资产
 
@@ -54,7 +72,7 @@ npm run dist
 npm run assets      # → build/generated/{icon.ico,icon.png,installerSidebar.bmp,installerHeader.bmp}
 ```
 
-改完 `build/assets-src.html` 里的视觉后重跑一次，再 `npm run dist` 即可。
+改完 `build/assets-src.html` 里的视觉后重跑一次，再重新打包即可。
 
 ## 目录结构
 
@@ -64,7 +82,8 @@ src/
   preload/    contextBridge 桥接
   renderer/   渲染进程 UI
   shared/     协议层（protocol.js）+ 文案字典（i18n.js）+ 键位显示名（keynames.js）
-build/        安装包品牌资产源文件与生成脚本
+installer/    自绘安装器（独立 Electron app：main.js + ui/ + 载荷同步与收集脚本）
+build/        品牌资产源文件与生成脚本
 docs/protocol.md   逆向协议文档
 test/              单元测试
 ```

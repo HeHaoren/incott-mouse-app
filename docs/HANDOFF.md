@@ -25,6 +25,9 @@
   DPI 页右侧「设备实时面板」显示型号/回报率/当前档位/电量/板载配置，灯点跟随档位颜色
 - 键位文案：下拉显示「左键 / A / DPI 循环」等中文名（协议值仍是原始枚举，`src/shared/keynames.js`）
 - 安装包：自定义图标 + NSIS 品牌侧图/顶图 + 可选安装路径（`build/`，`npm run assets` 重建资产）
+- 自绘安装器（`installer/`，`npm run setup`）：660×436 透明圆角窗口，选项/进度/完成/出错四态，
+  装的是 `dist/win-unpacked` 载荷；写 HKCU 卸载项，`UninstallString` 指向主程序 `--uninstall`
+  由应用自己清理快捷方式、注册表并调度目录删除；便携自解压 exe 约 126 MB（NSIS 版 84 MB 留作备用）
 - 窗口：全自绘（`frame:false` + 透明底），无原生标题栏/菜单栏；CSS 10px 圆角 + 1px 内描边，
   右上角自绘最小化/最大化/关闭（`window:minimize|toggleMaximize|close` IPC）；
   最大化时自动去圆角；`thickFrame:true` 保留边缘缩放与 Aero Snap
@@ -40,6 +43,8 @@
 | `src/shared/protocol.js` | 协议层纯函数（22 单元测试） |
 | `src/shared/config-format.js` | 官方 .ict/.icm 导入导出纯函数（8 单元测试） |
 | `src/shared/i18n.js` | 中英文案字典 |
+| `installer/` | 自绘安装器（独立 Electron app）：`main.js` 安装逻辑、`ui/` 三态界面、`sync-payload.js` / `collect.js` |
+| `build/` | 品牌资产源（`assets-src.html`）与生成脚本（`make-assets.js` → ico/bmp） |
 | `docs/protocol.md` | 逆向协议完整文档 |
 | `test/` | 协议层 + 配置格式测试 |
 
@@ -62,10 +67,14 @@
    8K 接收器指示灯（命令 8，三档：回报率/电量/仅低电量）已实现并接入灯效页。
 2. ~~**自定义图标**~~ 已完成：`build/make-assets.js` 生成多尺寸 ico + 安装器侧图/顶图，安装包已改自定义 NSIS（可选路径）。
 3. **更多型号实机适配**（连接时已能识别型号/传感器/8K，但只实测过 0x522C）
-4. **安装包视觉复核**：带品牌侧图的向导只验证了构建参数（`oneClick:false`、图标已应用、位图 define 已注入），
-   界面本身还没在实机上截图确认（上次启动安装器时被全屏游戏挡住）。
+4. **安装向导视觉复核**：NSIS 版向导已由自绘安装器取代；自绘安装器四态界面已通过 CDP 截图确认，
+   但**在真实用户环境下的完整安装（快捷方式 + 注册表 + 卸载）尚未实跑**——开发沙箱把
+   `reg.exe` / `powershell.exe` 拉黑，这几步只验证了「失败不阻断」的降级路径。
+   首次真实安装后需要检查：桌面/开始菜单快捷方式、设置里的「应用和功能」条目、`--uninstall` 卸载流程。
 5. **透明窗口的已知取舍**（已与用户确认接受）：文字退化为灰度抗锯齿、无系统阴影；
    若以后要换回清晰次像素渲染，需放弃圆角（`02181a4` 是可回退的 WCO 版本）。
+6. **本地遗留目录**：`dist-setup/`、`dist-setup2/` 是前期构建产物，被环境的删除保护锁住无法清理，
+   需手动在资源管理器里删掉（各约 450 MB）。
 
 ## 环境关键坑
 

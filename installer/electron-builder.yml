@@ -1,0 +1,30 @@
+appId: com.incott.mouseapp.setup
+productName: Incott Mouse Driver Setup
+copyright: Incott Mouse Driver
+npmRebuild: false
+electronVersion: 33.4.11
+
+directories:
+  output: ../dist/setup-build
+  buildResources: assets
+
+files:
+  - main.js
+  - preload.js
+  - ui/**/*
+  - package.json
+
+# 被安装的应用本体（由 sync-payload.js 从 dist/win-unpacked 同步过来）
+extraResources:
+  - from: payload
+    to: payload
+
+win:
+  target: portable
+  icon: ../build/generated/icon.ico
+
+portable:
+  artifactName: Incott-Mouse-Driver-Setup-${version}.${ext}
+  unpackDirName: IncottSetup
+  splashImage: assets/splash.bmp
+  requestExecutionLevel: user

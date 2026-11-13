@@ -76,12 +76,40 @@
     background: linear-gradient(150deg, #7B87FA 0%, #4B58DC 54%, #2A3199 100%);
     display: flex; align-items: center; justify-content: center;
     position: relative;
-  }
-  .icon::before {
+  }  .icon::before {
     content: ""; position: absolute; inset: 0;
     background: radial-gradient(70% 60% at 28% 16%, rgba(255,255,255,.30), transparent 62%);
   }
   .icon svg { position: relative; }
+
+  /* ── 便携版启动闪屏 480×200（NSIS portable 解包时显示）── */
+  .splash {
+    width: 480px; height: 200px;
+    background:
+      radial-gradient(90% 80% at 10% -20%, rgba(110,123,247,.30), transparent 62%),
+      linear-gradient(160deg, #141A26, #0A0D14 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; color: #EAF0F8; position: relative;
+    border: 1px solid #2A3342;
+  }
+  .splash .logo-row { display: flex; align-items: center; gap: 11px; }
+  .splash .mark { width: 30px; height: 30px; border-radius: 9px; }
+  .splash .mark::after { left: 11px; top: 11px; width: 8px; height: 8px; border-radius: 2.5px; }
+  .splash .wordmark { font-size: 17px; font-weight: 800; letter-spacing: .2em; }
+  .splash .note { font-size: 11.5px; color: #8B98AC; letter-spacing: .04em; }
+  .splash .bar {
+    width: 220px; height: 3px; border-radius: 2px; overflow: hidden;
+    background: #1C2433;
+  }
+  .splash .bar i {
+    display: block; height: 100%; width: 40%;
+    background: linear-gradient(90deg, #4B58DC, #93A2FF);
+    animation: slide 1.4s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0% { transform: translateX(-60%); }
+    100% { transform: translateX(320%); }
+  }
 </style>
 </head>
 <body>
@@ -119,6 +147,17 @@
         <div class="wordmark">INCOTT</div>
         <div class="sub">鼠标驱动</div>
       </div>
+    </div>
+  </template>
+
+  <template id="tpl-splash">
+    <div class="splash">
+      <div class="logo-row">
+        <div class="mark"></div>
+        <div class="wordmark">INCOTT</div>
+      </div>
+      <div class="note">正在准备安装程序…</div>
+      <div class="bar"><i></i></div>
     </div>
   </template>
 

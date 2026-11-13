@@ -152,6 +152,17 @@ app.whenReady().then(async () => {
   );
   console.log('installerHeader.bmp', headSize.width + 'x' + headSize.height);
 
+  // 便携版启动闪屏 480×200（NSIS portable 解包时显示）
+  const splash = await capture(win, 'splash', 480, 200);
+  const splashSize = splash.getSize();
+  const splashDir = path.join(__dirname, '..', 'installer', 'assets');
+  fs.mkdirSync(splashDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(splashDir, 'splash.bmp'),
+    bgraToBmp(splash.toBitmap(), splashSize.width, splashSize.height)
+  );
+  console.log('installer/assets/splash.bmp', splashSize.width + 'x' + splashSize.height);
+
   // 应用图标：多尺寸 ICO + 256 PNG
   const sizes = [16, 24, 32, 48, 64, 128, 256];
   const entries = [];

@@ -13,6 +13,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog, shell } = require('electron');
 const hid = require('./hid');
 const P = require('../shared/protocol');
@@ -733,7 +734,72 @@ process.on('uncaughtException', (e) => {
   console.error('[main] 未捕获异常:', e);
 });
 
-app.whenReady().then(() => {
+/**
+ * 卸载流程（安装器写入的 UninstallString 会带 --uninstall 调起本程序）。
+ * 装好的目录里只有这个 exe，所以由它自己删自己：先清快捷方式与注册表，
+ * 再拉起一个 detached 的 cmd 等本进程退出后整目录删除。
+ */
+async function runUninstall() {
+  const dir = path.dirname(app.getPath('exe'));
+  const res = await dialog.showMessageBox({
+    type: 'warning',
+    buttons: ['卸载', '取消'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+    title: '卸载 Incott Mouse Driver',
+    message: '确定要卸载 Incott 鼠标驱动吗？',
+    detail: '将删除程序文件和快捷方式。鼠标里的板载配置与已导出的配置文件不受影响。',
+  });
+  if (res.response !== 0) {
+    app.exit(0);
+    return;
+  }
+
+  // 关掉其它正在运行的实例（保留自己，否则文件一直被占用）
+  try {
+    spawn('taskkill', ['/F', '/FI', `PID ne ${process.pid}`, '/IM', 'Incott Mouse Driver.exe'], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+  } catch (_) { /* 忽略 */ }
+
+  // 快捷方式
+  const lnks = [
+    path.join(app.getPath('desktop'), 'Incott Mouse Driver.lnk'),
+    path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Incott Mouse Driver.lnk'),
+  ];
+  for (const p of lnks) {
+    try {
+      fs.rmSync(p, { force: true });
+    } catch (_) { /* 忽略 */ }
+  }
+
+  // 卸载注册表项（reg.exe 被安全策略拦掉时静默跳过）
+  try {
+    spawn('reg', ['delete', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\com.incott.mouseapp', '/f'], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+  } catch (_) { /* 忽略 */ }
+
+  // 本进程退出后再删目录（自身 exe 被占用，必须先退出）
+  try {
+    spawn('cmd.exe', ['/c', `ping -n 4 127.0.0.1 >nul & rmdir /s /q "${dir}"`], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    }).unref();
+  } catch (_) { /* 忽略 */ }
+
+  app.exit(0);
+}
+
+app.whenReady().then(async () => {
+  if (process.argv.includes('--uninstall')) {
+    await runUninstall();
+    return;
+  }
   registerIpc();
   createWindow();
   // 只有开机自启（注册表 Run 带 --background）才静默挂托盘；手动运行 exe 总是弹窗

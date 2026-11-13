@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>Incott Mouse Driver 安装程序</title>
+  <link rel="stylesheet" href="setup.css" />
+</head>
+<body>
+  <div class="card">
+    <div class="backdrop"></div>
+
+    <!-- 自绘标题栏 -->
+    <header class="titlebar">
+      <div class="brand">
+        <span class="mark"></span>
+        <span class="brand-name">INCOTT</span>
+        <span class="brand-sub">鼠标驱动 · 安装程序</span>
+      </div>
+      <div class="chrome">
+        <button id="minBtn" class="chrome-btn" title="最小化" aria-label="最小化">
+          <svg viewBox="0 0 12 12"><path d="M3 6h6"/></svg>
+        </button>
+        <button id="closeBtn" class="chrome-btn chrome-close" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 12 12"><path d="M3.4 3.4l5.2 5.2M8.6 3.4L3.4 8.6"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="host">
+      <!-- ① 选项 -->
+      <section class="state active" id="state-options">
+        <h1 id="optTitle">安装 Incott Mouse Driver</h1>
+        <p class="sub" id="optSub">版本 —</p>
+
+        <div class="field">
+          <label for="dirInput">安装位置</label>
+          <div class="path-row">
+            <input id="dirInput" type="text" readonly />
+            <button id="browseBtn" class="btn-ghost">浏览…</button>
+          </div>
+          <p class="hint" id="existingHint"></p>
+        </div>
+
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="deskChk" checked /><span>创建桌面快捷方式</span></label>
+          <label class="check"><input type="checkbox" id="menuChk" checked /><span>创建开始菜单快捷方式</span></label>
+        </div>
+
+        <footer class="foot">
+          <span class="space" id="spaceText">需要 — 磁盘空间</span>
+          <button id="installBtn" class="btn-primary">安装</button>
+        </footer>
+      </section>
+
+      <!-- ② 进度 -->
+      <section class="state" id="state-progress">
+        <h1>正在安装…</h1>
+        <p class="sub">请不要关闭窗口或断开鼠标接收器</p>
+        <div class="bar"><i id="barFill"></i></div>
+        <div class="progress-meta">
+          <span id="detailText">准备中…</span>
+          <span id="percentText">0%</span>
+        </div>
+        <footer class="foot">
+          <span class="space"></span>
+          <button id="cancelBtn" class="btn-ghost">取消</button>
+        </footer>
+      </section>
+
+      <!-- ③ 完成 -->
+      <section class="state" id="state-done">
+        <div class="done-icon">
+          <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21"/><path d="M15 24.5l6.2 6.2L33 18.6"/></svg>
+        </div>
+        <h1>安装完成</h1>
+        <p class="sub" id="doneSub">已安装到 —</p>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="launchChk" checked /><span>立即启动 Incott 鼠标驱动</span></label>
+        </div>
+        <p class="warn" id="doneWarn"></p>
+        <footer class="foot">
+          <button id="openFolderBtn" class="btn-link">打开安装目录</button>
+          <button id="finishBtn" class="btn-primary">完成</button>
+        </footer>
+      </section>
+
+      <!-- ④ 出错 -->
+      <section class="state" id="state-error">
+        <div class="error-icon">
+          <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21"/><path d="M24 14v13"/><circle cx="24" cy="33" r="1.8" class="dot"/></svg>
+        </div>
+        <h1>安装未完成</h1>
+        <p class="sub" id="errorText">—</p>
+        <footer class="foot">
+          <button id="backBtn" class="btn-ghost">返回</button>
+          <button id="retryBtn" class="btn-primary">重试</button>
+        </footer>
+      </section>
+    </main>
+  </div>
+  <script src="setup.js"></script>
+</body>
+</html>
