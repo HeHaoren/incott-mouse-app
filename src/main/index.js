@@ -13,7 +13,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog, shell } = require('electron');
 const hid = require('./hid');
 const P = require('../shared/protocol');
 const fmt = require('../shared/config-format');
@@ -212,6 +212,9 @@ async function readBatteryValue() {
   const charging = raw > 100;
   const level = charging ? raw - 128 : raw;
   if (level < 0 || level > 100) return null;
+  // 设备休眠时可能回显 0x89 但数据区全 0 —— 真实电量读到 0 的情况不存在（0% 已关机），
+  // 视为无效读取，避免 UI 误显示成红色的 0%。
+  if (level === 0) return null;
   return { level, charging };
 }
 
@@ -447,6 +450,19 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => getSettings());
   ipcMain.handle('settings:set', (_e, patch) => setSettings(patch || {}));
 
+  // 应用信息 / 外链（仅允许 https，防止渲染进程被注入后调用任意协议）
+  ipcMain.handle('app:info', () => ({
+    version: app.getVersion(),
+    homepage: 'https://github.com/HeHaoren/incott-mouse-app',
+  }));
+  ipcMain.handle('app:openExternal', async (_e, url) => {
+    if (typeof url !== 'string' || !/^https:\/\//i.test(url)) {
+      throw new Error('只允许打开 https 链接');
+    }
+    await shell.openExternal(url);
+    return true;
+  });
+
   // ── 配置 / 宏 导入导出（官方 .ict / .icm 格式）─────────────
   ipcMain.handle('config:exportProfile', async (_e, profileData) => {
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -632,10 +648,10 @@ function startBatteryPolling() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 960,
-    height: 700,
-    minWidth: 800,
-    minHeight: 560,
+    width: 1080,
+    height: 720,
+    minWidth: 860,
+    minHeight: 580,
     title: 'Incott Mouse Driver',
     backgroundColor: '#101418',
     webPreferences: {

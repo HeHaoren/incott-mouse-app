@@ -6,6 +6,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 const i18n = require('../shared/i18n');
+const keynames = require('../shared/keynames');
 
 contextBridge.exposeInMainWorld('api', {
   /** 枚举匹配的 Incott 鼠标 */
@@ -47,6 +48,12 @@ contextBridge.exposeInMainWorld('api', {
   /** 读取设置（开机自启 / 启动后台保留） */
   getSettings: () => ipcRenderer.invoke('settings:get'),
 
+  /** 应用信息（版本号、主页） */
+  getAppInfo: () => ipcRenderer.invoke('app:info'),
+
+  /** 用系统浏览器打开 https 链接 */
+  openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
+
   /** 更新设置 */
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
 
@@ -61,6 +68,11 @@ contextBridge.exposeInMainWorld('api', {
 
   /** 导入 .icm 宏库（弹打开对话框） */
   importMacros: () => ipcRenderer.invoke('config:importMacros'),
+});
+
+// 键位显示名（把 LEFT / KeyA 等协议枚举翻成界面文案）
+contextBridge.exposeInMainWorld('keynames', {
+  keyLabel: (kind, value) => keynames.keyLabel(kind, value, i18n.getLang()),
 });
 
 // i18n（渲染进程通过 window.i18n 使用）

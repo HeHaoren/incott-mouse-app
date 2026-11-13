@@ -120,6 +120,7 @@ function selectLang(lang) {
 async function init() {
   applyI18n();
   bindEvents();
+  loadAppInfo();
   try {
     state.constants = await window.api.getConstants();
     state.maxDpi = state.constants.sensors.PAW3395.maxDpi;
@@ -131,6 +132,29 @@ async function init() {
   startBatteryAutoRefresh();
   renderAll();
   refreshDeviceState();
+}
+
+/** 侧栏底部：版本号 + 仓库链接 */
+async function loadAppInfo() {
+  let info = null;
+  try {
+    info = await window.api.getAppInfo();
+  } catch (_) { /* 忽略 */ }
+  const ver = $('#appVersion');
+  if (ver) ver.textContent = info && info.version ? 'v' + info.version : '';
+  const link = $('#repoLink');
+  if (link) {
+    const url = (info && info.homepage) || 'https://github.com/HeHaoren/incott-mouse-app';
+    link.addEventListener('click', () => window.api.openExternal(url));
+    link.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.api.openExternal(url);
+      }
+    });
+    link.setAttribute('tabindex', '0');
+    link.setAttribute('role', 'button');
+  }
 }
 
 function bindEvents() {
@@ -396,6 +420,64 @@ function renderDevice() {
   $('#applyBtn').disabled = !state.connected;
   renderDeviceInfo();
   renderBattery();
+  renderDevicePanel();
+}
+
+/** DPI 页右侧设备面板：连接态、型号、回报率、当前档位、电量、板载配置 */
+function renderDevicePanel() {
+  const panel = $('#devicePanel');
+  if (!panel) return;
+  const on = state.connected && !!state.modelInfo;
+  panel.classList.toggle('connected', on);
+
+  const stateEl = $('#panelState');
+  if (stateEl) {
+    if (!state.connected) {
+      stateEl.textContent = t('notConnected');
+    } else if (state.modelInfo) {
+      stateEl.textContent = state.modelInfo.model + (state.modelInfo.is8KReceiver ? ' · 8K' : '');
+    } else {
+      stateEl.textContent = state.isWireless ? t('connectedWireless') : t('connectedWired');
+    }
+  }
+
+  const lv = state.dpiLevels[state.currentDpi];
+  const rateEl = $('#statRate');
+  if (rateEl) rateEl.textContent = state.rate ? `${state.rate} Hz` : '—';
+
+  const dpiEl = $('#statDpi');
+  if (dpiEl) {
+    if (!lv) {
+      dpiEl.textContent = '—';
+    } else if (state.xySplit && lv.x !== lv.y) {
+      dpiEl.textContent = `${lv.x} / ${lv.y}`;
+    } else {
+      dpiEl.textContent = String(lv.x);
+    }
+  }
+
+  const batEl = $('#statBattery');
+  if (batEl) {
+    if (!state.connected || state.battery == null) {
+      batEl.textContent = '—';
+      batEl.classList.remove('warn', 'bad');
+    } else {
+      batEl.textContent = `${state.battery}%` + (state.batteryCharging ? ' · 充电中' : '');
+      batEl.classList.toggle('warn', !state.batteryCharging && state.battery <= 60 && state.battery > 25);
+      batEl.classList.toggle('bad', !state.batteryCharging && state.battery <= 25);
+    }
+  }
+
+  const profEl = $('#statProfile');
+  if (profEl) profEl.textContent = state.connected ? `${(state.profile || 0) + 1} / 5` : '—';
+
+  // 面板灯效颜色跟随当前档位色（仅连接时点亮，未连接保持熄灭）
+  if (on && lv && lv.color) {
+    panel.classList.add('dpi-colored');
+    panel.style.setProperty('--led-color', lv.color);
+  } else {
+    panel.classList.remove('dpi-colored');
+  }
 }
 
 // ── 电量 ───────────────────────────────────────────────────
@@ -465,13 +547,13 @@ function renderBattery() {
   el.classList.remove('hidden');
   el.title = t('batteryHint');
   $('#batteryVal').textContent = state.battery;
-  const icon = el.querySelector('.battery-icon');
-  if (icon) icon.textContent = state.batteryCharging ? '⚡' : '🔋';
   // 三段颜色：>60 绿，25~60 黄，≤25 红（对齐官方驱动的电量显示规则）
   el.classList.remove('high', 'mid', 'low');
   if (state.battery > 60) el.classList.add('high');
   else if (state.battery > 25) el.classList.add('mid');
   else el.classList.add('low');
+  el.classList.toggle('charging', !!state.batteryCharging);
+  renderDevicePanel();
 }
 
 // ── DPI ───────────────────────────────────────────────────
@@ -553,6 +635,8 @@ function renderDpi() {
 
     list.appendChild(card);
   });
+
+  renderDevicePanel();
 }
 
 function dpiRow(label, dpiIndex, axis, color) {
@@ -770,11 +854,12 @@ function defaultForType(type) {
 
 function buildButtonOptions(type, selectedValue) {
   const frag = document.createDocumentFragment();
+  const label = (code) => (window.keynames ? window.keynames.keyLabel(type, code) : code);
   if (type === 'mouse') {
     state.constants.mouseKeys.forEach((k) => {
       const opt = document.createElement('option');
       opt.value = k;
-      opt.textContent = k;
+      opt.textContent = label(k);
       opt.selected = k === selectedValue;
       frag.appendChild(opt);
     });
@@ -782,7 +867,7 @@ function buildButtonOptions(type, selectedValue) {
     Object.keys(state.constants.hidKeyCodes).forEach((k) => {
       const opt = document.createElement('option');
       opt.value = k;
-      opt.textContent = k;
+      opt.textContent = label(k);
       opt.selected = k === selectedValue;
       frag.appendChild(opt);
     });
@@ -790,7 +875,7 @@ function buildButtonOptions(type, selectedValue) {
     state.constants.mediaKeys.forEach((k) => {
       const opt = document.createElement('option');
       opt.value = k;
-      opt.textContent = k;
+      opt.textContent = label(k);
       opt.selected = k === selectedValue;
       frag.appendChild(opt);
     });
@@ -810,15 +895,18 @@ function buildButtonOptions(type, selectedValue) {
 let macroKeySelectInited = false;
 
 function initMacroKeySelect() {
-  if (macroKeySelectInited || !state.constants) return;
+  if (!state.constants) return;
   macroKeySelectInited = true;
   const sel = $('#macroKeySel');
+  const prev = sel.value;
+  sel.innerHTML = '';
   Object.entries(state.constants.hidKeyCodes).forEach(([name, code]) => {
     const opt = document.createElement('option');
     opt.value = code;
-    opt.textContent = name;
+    opt.textContent = window.keynames ? window.keynames.keyLabel('keyboard', name) : name;
     sel.appendChild(opt);
   });
+  if (prev) sel.value = prev;
 }
 
 function renderMacro() {
@@ -870,7 +958,8 @@ function renderMacroItems(m) {
 
     const key = document.createElement('span');
     key.className = 'macro-item-key';
-    key.textContent = codeToKeyName(it.keyCode);
+    const rawName = codeToKeyName(it.keyCode);
+    key.textContent = window.keynames ? window.keynames.keyLabel('keyboard', rawName) : rawName;
 
     const delayInput = document.createElement('input');
     delayInput.type = 'number';

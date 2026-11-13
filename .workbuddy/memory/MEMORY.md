@@ -36,6 +36,13 @@ Incott（因科特）鼠标桌面配置工具，Electron + node-hid，不依赖�
 - 官方 looptype 1/2/3 = 硬件 loopType 0/1/2；dpicolor 是 0xBBGGRR 整数
 - 宏键 itemdata 官方存宏库 uid，本工具写槽位号（本工具往返无损，官方导入宏键可能解析不到）
 
+## 代码约定（新增，2026-11-13）
+- 键位显示名走 `src/shared/keynames.js`（pure，preload 暴露 `window.keynames.keyLabel(kind,value)`）；**协议值永远是原始枚举名**，只翻显示
+- 品牌资产源在 `build/assets-src.html`，`npm run assets` 用 Electron 渲染生成 `build/generated/*`（ico/bmp），改视觉后重跑再 `npm run dist`
+- NSIS 已改 `oneClick:false` + `allowToChangeInstallationDirectory`，产物名 `Incott-Mouse-Driver-Setup-${version}.exe`
+- 启动 electron 前必须 `unset ELECTRON_RUN_AS_NODE`（否则 `whenReady` 报 undefined）
+- 电量读到 `level === 0` 视为无效（休眠回显），不要再当 0% 显示
+
 ## 用户偏好
 - 用户的鼠标：Incott G24 8K 无线（PID 0x522C，PAW3950）
 - 托盘 UX 需求（已确认）：单击/双击呼出窗口、右键菜单常驻电量、开机自启静默（--background）而手动运行必弹窗、DPI 切换弹提示、托盘图标按电量绿/黄/红变色

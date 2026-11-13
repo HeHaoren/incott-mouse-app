@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: transparent; overflow: hidden;
+  }
+  .canvas { position: relative; overflow: hidden; }
+
+  /* ── 安装器侧图 164×314 ── */
+  .sidebar {
+    width: 164px; height: 314px;
+    background:
+      radial-gradient(120% 70% at 18% 0%, rgba(110,123,247,.30), transparent 62%),
+      radial-gradient(90% 60% at 100% 100%, rgba(75,88,220,.22), transparent 60%),
+      linear-gradient(165deg, #161C28 0%, #0C1018 55%, #090C12 100%);
+    display: flex; flex-direction: column; padding: 20px 18px 16px;
+    color: #EAF0F8;
+  }
+  .sidebar::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(146,162,255,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(146,162,255,.055) 1px, transparent 1px);
+    background-size: 26px 26px;
+    mask-image: radial-gradient(85% 70% at 40% 22%, #000 0%, transparent 78%);
+  }
+  .brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; }
+  .mark {
+    width: 28px; height: 28px; border-radius: 9px;
+    background: linear-gradient(140deg, #93A2FF, #4B58DC);
+    box-shadow: 0 0 0 3px rgba(110,123,247,.16), 0 6px 16px rgba(75,88,220,.45);
+    position: relative;
+  }
+  .mark::after {
+    content: ""; position: absolute; left: 10px; top: 10px;
+    width: 8px; height: 8px; border-radius: 2.5px; background: #0B0E14;
+  }
+  .wordmark { font-size: 13px; font-weight: 800; letter-spacing: .2em; line-height: 1; }
+  .tagline { margin-top: 5px; font-size: 9px; letter-spacing: .12em; color: #8B98AC; }
+
+  .art { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: center; }
+  .art svg { width: 96px; height: 132px; }
+  .shell { fill: rgba(146,162,255,.055); stroke: rgba(146,162,255,.34); stroke-width: 1; }
+  .seam { stroke: rgba(146,162,255,.30); stroke-width: 1; fill: none; }
+  .wheel { fill: rgba(146,162,255,.16); stroke: rgba(146,162,255,.42); stroke-width: 1; }
+  .led { fill: #93A2FF; filter: drop-shadow(0 0 8px rgba(146,162,255,.95)); }
+
+  .foot { position: relative; z-index: 1; }
+  .rule { height: 1px; background: linear-gradient(90deg, rgba(146,162,255,.42), rgba(146,162,255,0)); margin-bottom: 10px; }
+  .ver { font-family: "Cascadia Mono", Consolas, monospace; font-size: 9px; color: #7C8AA0; letter-spacing: .04em; }
+  .repo { margin-top: 4px; font-family: "Cascadia Mono", Consolas, monospace; font-size: 8px; color: #5E6B80; }
+
+  /* ── 安装器顶图 150×57 ── */
+  .header {
+    width: 150px; height: 57px;
+    background: linear-gradient(120deg, #141A26, #0B0E14);
+    display: flex; align-items: center; gap: 8px; padding: 0 14px;
+    color: #EAF0F8; position: relative; overflow: hidden;
+  }
+  .header::after {
+    content: ""; position: absolute; right: -16px; top: -22px;
+    width: 62px; height: 62px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(110,123,247,.34), transparent 68%);
+  }
+  .header .mark { width: 20px; height: 20px; border-radius: 6px; }
+  .header .mark::after { left: 7px; top: 7px; width: 6px; height: 6px; border-radius: 2px; }
+  .header .wordmark { font-size: 10.5px; letter-spacing: .18em; }
+  .header .sub { font-size: 8px; color: #8B98AC; letter-spacing: .08em; margin-top: 3px; }
+
+  /* ── 应用图标（单色圆角方块 + 白色鼠标剪影）── */
+  .icon {
+    background: linear-gradient(150deg, #7B87FA 0%, #4B58DC 54%, #2A3199 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .icon::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(70% 60% at 28% 16%, rgba(255,255,255,.30), transparent 62%);
+  }
+  .icon svg { position: relative; }
+</style>
+</head>
+<body>
+  <div class="canvas" id="root"></div>
+
+  <template id="tpl-sidebar">
+    <div class="sidebar">
+      <div class="brand">
+        <div class="mark"></div>
+        <div>
+          <div class="wordmark">INCOTT</div>
+          <div class="tagline">鼠标驱动</div>
+        </div>
+      </div>
+      <div class="art">
+        <svg viewBox="0 0 120 168">
+          <path class="shell" d="M60 6c19 0 34 16 34 40v56c0 26-13 40-34 40S26 128 26 102V46C26 22 41 6 60 6z" />
+          <path class="seam" d="M60 6.5V56M60 56c-8.5 0-14-5-14-11.5M60 56c8.5 0 14-5 14-11.5" />
+          <rect class="wheel" x="56" y="30" width="8" height="18" rx="4" />
+          <circle class="led" cx="60" cy="98" r="6.5" />
+        </svg>
+      </div>
+      <div class="foot">
+        <div class="rule"></div>
+        <div class="ver">v__VERSION__</div>
+        <div class="repo">github.com/HeHaoren</div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-header">
+    <div class="header">
+      <div class="mark"></div>
+      <div>
+        <div class="wordmark">INCOTT</div>
+        <div class="sub">鼠标驱动</div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-icon">
+    <div class="icon" style="width:100%;height:100%">
+      <svg viewBox="0 0 100 100" width="54%" height="54%">
+        <path d="M50 8c13.5 0 24 11 24 27.5V66c0 17-9.5 26-24 26s-24-9-24-26V35.5C26 19 36.5 8 50 8z"
+              fill="#fff" fill-opacity=".96" />
+        <path d="M50 8.8v26M50 34.8c-6 0-9.8-3.4-9.8-8M50 34.8c6 0 9.8-3.4 9.8-8"
+              stroke="#4B58DC" stroke-opacity=".55" stroke-width="2" fill="none" stroke-linecap="round" />
+        <rect x="46.4" y="17" width="7.2" height="12" rx="3.6" fill="#4B58DC" fill-opacity=".55" />
+      </svg>
+    </div>
+  </template>
+
+  <script>
+    const q = new URLSearchParams(location.search);
+    const kind = q.get('kind');
+    const version = q.get('v') || '1.0.0';
+    const size = parseInt(q.get('size') || '0', 10);
+    const root = document.getElementById('root');
+    const tpl = document.getElementById('tpl-' + kind);
+    root.appendChild(tpl.content.cloneNode(true));
+    if (kind === 'sidebar') {
+      const el = root.querySelector('.ver');
+      if (el) el.textContent = 'v' + version;
+    }
+    if (kind === 'icon') {
+      root.style.width = size + 'px';
+      root.style.height = size + 'px';
+      root.querySelector('.icon').style.borderRadius = Math.round(size * 0.215) + 'px';
+      document.documentElement.style.background = 'transparent';
+    }
+    document.title = 'asset-' + kind;
+  </script>
+</body>
+</html>

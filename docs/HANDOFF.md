@@ -21,6 +21,10 @@
 - 导入导出：兼容官方网页驱动的 .ict 配置 / .icm 宏库格式（含前进/后退 UI 顺序、looptype ±1 换算）
 - 中英文切换（含原生菜单栏），文案逐字对齐官网
 - 连接优化：worker 线程枚举，秒连不卡（此前 15 秒"未响应"）
+- UI：G24 遥测风深色面板（线性 SVG 图标、焦点环、禁用态、窄窗口自适应）；
+  DPI 页右侧「设备实时面板」显示型号/回报率/当前档位/电量/板载配置，灯点跟随档位颜色
+- 键位文案：下拉显示「左键 / A / DPI 循环」等中文名（协议值仍是原始枚举，`src/shared/keynames.js`）
+- 安装包：自定义图标 + NSIS 品牌侧图/顶图 + 可选安装路径（`build/`，`npm run assets` 重建资产）
 
 ## 技术架构
 
@@ -53,19 +57,26 @@
 1. **鼠标本体 RGB 灯效**：官方网页驱动未实现（设备层只有 setReceiverLED），仅老原生驱动
    `CLedSetDlg` 支持 6 种模式（关/霓虹/呼吸/闪烁/流光/氛围）；命令字需 USB 抓包或反汇编原生驱动。
    8K 接收器指示灯（命令 8，三档：回报率/电量/仅低电量）已实现并接入灯效页。
-2. **自定义图标**（exe 现在用 Electron 默认图标）
+2. ~~**自定义图标**~~ 已完成：`build/make-assets.js` 生成多尺寸 ico + 安装器侧图/顶图，安装包已改自定义 NSIS（可选路径）。
 3. **更多型号实机适配**（连接时已能识别型号/传感器/8K，但只实测过 0x522C）
+4. **安装包视觉复核**：带品牌侧图的向导只验证了构建参数（`oneClick:false`、图标已应用），
+   界面本身还没在实机上截图确认（上次启动安装器时被全屏游戏挡住）。
 
 ## 环境关键坑
 
 - **真 node 路径**：`/f/AI Agent/nodejs/node.exe`。PATH 里的 `node` 是天枢的 wrapper（→`tianshu-runtime.exe`），会导致 node-gyp / run_tests 失败。跑命令先 `export PATH="/f/AI Agent/nodejs:$PATH"`。
-- **run_tests 工具在本环境 blocked**（tianshu-runtime 问题），改用 `"/f/AI Agent/nodejs/node.exe" --test` 跑测试（18 通过）。
+- **`ELECTRON_RUN_AS_NODE=1` 会污染启动**：某些终端环境自带该变量，直接跑 `electron .` 会报
+  `Cannot read properties of undefined (reading 'whenReady')`（require('electron') 退化成路径串）。启动前 `unset ELECTRON_RUN_AS_NODE`。
+- **run_tests 工具在本环境 blocked**（tianshu-runtime 问题），改用 `"/f/AI Agent/nodejs/node.exe" --test` 跑测试。
 - **打包**：`npm run dist` 前设 `ELECTRON_MIRROR` 和 `ELECTRON_BUILDER_BINARIES_MIRROR` 两个镜像环境变量；`package.json` 里 `npmRebuild:false` 是必须的（node-hid 是 N-API 不需重编译，且机器无 Visual Studio）。
+- **打包前先关掉已安装的应用进程**，否则 `Incott Mouse Driver.exe` 被占用会 ERR_ELECTRON_BUILDER_CANNOT_EXECUTE。
 - **gh CLI**：`/c/Program Files/GitHub CLI/gh.exe`，账号 HeHaoren 已登录。
+- **CDP 调试**：`curl`/`fetch` 打 127.0.0.1 会走沙箱代理失败，需 `--noproxy '*'` 或 `http.get({agent:false})`；
+  且 electron 必须用后台任务方式启动（`nohup &` 会随 shell 退出被杀）。**页面 reload 后 `Page.captureScreenshot` 会挂死**，改代码后重启进程而不是 reload。
 
 ## 验证状态
 
-- 协议层 30 测试全绿；UI 各交互（DPI 输入、XY 同步、宏上传、语言切换、连接）均已 CDP 实机验证通过。
+- 协议层 + 配置格式 + 键位名映射共 40 测试全绿；UI 各交互（DPI 输入、XY 同步、宏上传、语言切换、连接）均已 CDP 实机验证通过。
 - 打包 exe 已实测能启动 + node-hid 正常枚举鼠标。
 
 ## 发版流程

@@ -22,7 +22,9 @@
         <span class="battery-icon">🔋</span><span id="batteryVal">--</span>%
       </span>
       <div class="settings-wrap">
-        <button id="settingsBtn" class="btn btn-ghost" title="设置">⚙</button>
+        <button id="settingsBtn" class="btn btn-ghost icon-btn" title="设置" aria-label="设置">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 6.2h13.2M3.4 13.8h13.2"/><circle cx="7.6" cy="6.2" r="2.1" class="dot-solid"/><circle cx="12.9" cy="13.8" r="2.1" class="dot-solid"/></svg>
+        </button>
         <div id="settingsMenu" class="settings-menu hidden">
           <label class="settings-item">
             <input type="checkbox" id="setAutoLaunch" />
@@ -41,7 +43,9 @@
         </div>
       </div>
       <div class="lang-wrap">
-        <button id="langBtn" class="btn btn-ghost lang-btn" title="Language">🌐</button>
+        <button id="langBtn" class="btn btn-ghost lang-btn icon-btn" title="Language" aria-label="Language">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.2"/><path d="M2.8 10h14.4M10 2.8c1.9 2 2.9 4.5 2.9 7.2S11.9 15.2 10 17.2C8.1 15.2 7.1 12.7 7.1 10S8.1 4.8 10 2.8z"/></svg>
+        </button>
         <div id="langMenu" class="lang-menu hidden">
           <button class="lang-option" data-lang="zh">中文</button>
           <button class="lang-option" data-lang="en">English</button>
@@ -54,20 +58,26 @@
   <div class="layout">
     <nav class="sidebar">
       <button class="nav-item active" data-tab="dpi">
-        <span class="nav-icon">◉</span><span data-i18n="navDpi">DPI</span>
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.2"/><path d="M10 1.6v3.2M10 15.2v3.2M1.6 10h3.2M15.2 10h3.2"/><circle cx="10" cy="10" r="1.8" class="dot"/></svg></span><span data-i18n="navDpi">DPI</span>
       </button>
       <button class="nav-item" data-tab="buttons">
-        <span class="nav-icon">⌨</span><span data-i18n="navButtons">键位设置</span>
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><rect x="5.2" y="2.6" width="9.6" height="14.8" rx="4.8"/><path d="M10 2.8v4.1M5.4 7.2h9.2"/></svg></span><span data-i18n="navButtons">键位设置</span>
       </button>
       <button class="nav-item" data-tab="performance">
-        <span class="nav-icon">⚡</span><span data-i18n="navPerformance">性能设置</span>
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M3.1 15.2a7.4 7.4 0 1 1 13.8 0"/><path d="M10 15.2l3.3-4.6"/><circle cx="10" cy="15.4" r="1.4" class="dot"/></svg></span><span data-i18n="navPerformance">性能设置</span>
       </button>
       <button class="nav-item" data-tab="macro">
-        <span class="nav-icon">≣</span><span data-i18n="navMacro">录制宏</span>
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><rect x="2.8" y="3.4" width="14.4" height="13.2" rx="2.6"/><path d="M6.2 7.4h4.2M6.2 10.4h7.6M6.2 13.4h5.2"/><path d="M13.4 6.6l1.9 1.9-1.9 1.9" class="accent-stroke"/></svg></span><span data-i18n="navMacro">录制宏</span>
       </button>
       <button class="nav-item" data-tab="lighting">
-        <span class="nav-icon">✦</span><span data-i18n="navLighting">灯效</span>
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 2.2c2.9 0 5 2.1 5 4.9 0 1.9-1 3.1-1.9 4.1-.6.7-.9 1.2-.9 2H7.8c0-.8-.3-1.3-.9-2-.9-1-1.9-2.2-1.9-4.1 0-2.8 2.1-4.9 5-4.9z"/><path d="M8.2 16.6h3.6"/></svg></span><span data-i18n="navLighting">灯效</span>
       </button>
+      <div class="sidebar-foot">
+        <a id="repoLink" class="repo-link" title="GitHub">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.9a8.1 8.1 0 0 0-2.6 15.8c.4.1.6-.2.6-.4v-1.5c-2.3.5-2.8-1.1-2.8-1.1-.4-1-.9-1.2-.9-1.2-.8-.5.1-.5.1-.5.8.1 1.3.9 1.3.9.7 1.3 1.9 1 2.4.7.1-.5.3-1 .5-1.2-1.8-.2-3.7-.9-3.7-4.1 0-.9.3-1.6.8-2.2-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.5 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.2 0 3.2-1.9 3.9-3.7 4.1.3.3.6.8.6 1.6v2.4c0 .2.2.5.6.4A8.1 8.1 0 0 0 10 1.9z"/></svg>
+        </a>
+        <span id="appVersion" class="sidebar-ver">v—</span>
+      </div>
     </nav>
 
     <main class="content">
@@ -82,9 +92,59 @@
           </label>
         </div>
         <p class="hint" data-i18n="dpiHint">DPI即鼠标移速，使用鼠标的DPI按键可快速切换DPI挡位，通过上方编辑或拖动滑块修改DPI设置</p>
-        <div id="dpiList" class="dpi-list"></div>
-        <div class="dpi-actions">
-          <button id="addDpiBtn" class="btn btn-ghost" data-i18n="addDpi">新增档位</button>
+        <div class="dpi-layout">
+          <div class="dpi-main">
+            <div id="dpiList" class="dpi-list"></div>
+            <div class="dpi-actions">
+              <button id="addDpiBtn" class="btn btn-ghost" data-i18n="addDpi">新增档位</button>
+            </div>
+          </div>
+          <aside class="device-panel" id="devicePanel">
+            <div class="panel-head">
+              <span class="panel-dot" id="panelDot"></span>
+              <span class="panel-title" data-i18n="panelDevice">设备</span>
+              <span class="panel-state" id="panelState" data-i18n="notConnected">未连接设备</span>
+            </div>
+            <div class="mouse-art" id="mouseArt" aria-hidden="true">
+              <svg viewBox="0 0 120 168">
+                <defs>
+                  <linearGradient id="mouseBody" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#242C3B" />
+                    <stop offset="100%" stop-color="#141A24" />
+                  </linearGradient>
+                  <linearGradient id="mouseEdge" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#8E9CFF" stop-opacity=".85" />
+                    <stop offset="100%" stop-color="#4B58DC" stop-opacity=".35" />
+                  </linearGradient>
+                </defs>
+                <ellipse class="mouse-shadow" cx="60" cy="158" rx="34" ry="6" />
+                <path class="mouse-shell" d="M60 6c19 0 34 16 34 40v56c0 26-13 40-34 40S26 128 26 102V46C26 22 41 6 60 6z" fill="url(#mouseBody)" />
+                <path class="mouse-outline" d="M60 6c19 0 34 16 34 40v56c0 26-13 40-34 40S26 128 26 102V46C26 22 41 6 60 6z" />
+                <path class="mouse-seamL" d="M60 6.5V56M60 56c-8.5 0-14-5-14-11.5" />
+                <path class="mouse-seamR" d="M60 56c8.5 0 14-5 14-11.5" />
+                <rect class="mouse-wheel" x="56" y="30" width="8" height="18" rx="4" />
+                <circle class="mouse-led" id="mouseLed" cx="60" cy="96" r="7" />
+              </svg>
+            </div>
+            <div class="device-stats">
+              <div class="stat">
+                <span class="stat-label" data-i18n="reportRate">回报率</span>
+                <span class="stat-value" id="statRate">—</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label" data-i18n="statDpi">当前档位</span>
+                <span class="stat-value" id="statDpi">—</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label" data-i18n="batteryLabel">电量</span>
+                <span class="stat-value" id="statBattery">—</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label" data-i18n="statProfile">板载配置</span>
+                <span class="stat-value" id="statProfile">—</span>
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
 

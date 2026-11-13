@@ -43,8 +43,18 @@ npm run dist
 ```
 
 产物在 `dist/`：
-- `Incott Mouse Driver Setup 1.0.0-preview.1.exe`（NSIS 安装包，1.0 前瞻版）
+- `Incott-Mouse-Driver-Setup-1.0.0-preview.1.exe`（NSIS 安装包，可选安装路径、带品牌侧图）
 - `win-unpacked/Incott Mouse Driver.exe`（免安装版）
+
+## 品牌资产
+
+安装包图标与 NSIS 侧图/顶图由 `build/make-assets.js` 用 Electron 自身渲染生成（不依赖 ImageMagick）：
+
+```bash
+npm run assets      # → build/generated/{icon.ico,icon.png,installerSidebar.bmp,installerHeader.bmp}
+```
+
+改完 `build/assets-src.html` 里的视觉后重跑一次，再 `npm run dist` 即可。
 
 ## 目录结构
 
@@ -53,7 +63,8 @@ src/
   main/       Electron 主进程（窗口、HID 通信、IPC）
   preload/    contextBridge 桥接
   renderer/   渲染进程 UI
-  shared/     协议层（protocol.js）+ 文案字典（i18n.js）
+  shared/     协议层（protocol.js）+ 文案字典（i18n.js）+ 键位显示名（keynames.js）
+build/        安装包品牌资产源文件与生成脚本
 docs/protocol.md   逆向协议文档
 test/              单元测试
 ```

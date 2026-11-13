@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
+    "assets": "electron build/make-assets.js",
     "dist": "electron-builder"
   },
   "dependencies": {
@@ -21,13 +22,35 @@
     "appId": "com.incott.mouseapp",
     "productName": "Incott Mouse Driver",
     "npmRebuild": false,
+    "directories": {
+      "buildResources": "build"
+    },
     "files": [
       "src/**/*",
       "docs/**/*",
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/generated/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/generated/icon.ico",
+      "uninstallerIcon": "build/generated/icon.ico",
+      "installerHeader": "build/generated/installerHeader.bmp",
+      "installerHeaderIcon": "build/generated/icon.ico",
+      "installerSidebar": "build/generated/installerSidebar.bmp",
+      "uninstallerSidebar": "build/generated/installerSidebar.bmp",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Incott Mouse Driver",
+      "uninstallDisplayName": "Incott Mouse Driver ${version}",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Incott-Mouse-Driver-Setup-${version}.${ext}"
     }
   }
 }
