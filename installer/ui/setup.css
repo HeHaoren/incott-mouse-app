@@ -1,21 +1,21 @@
 /* Incott 安装程序 —— 与主程序同一套深色视觉体系 */
 
 :root {
-  --bg: #0B0E14;
-  --bg-elev: #12161F;
-  --bg-card: #191F2B;
-  --bg-inset: #070A10;
-  --border: #2A3342;
-  --border-subtle: #1E2633;
-  --border-strong: #4A5870;
-  --text: #EAF0F8;
-  --text-dim: #9AA7B8;
-  --text-muted: #6B7889;
-  --accent: #93A2FF;
-  --accent-strong: #4B58DC;
-  --accent-hover: #5C68EC;
-  --accent-soft: rgba(110, 123, 247, .14);
-  --accent-border: #6E7BF7;
+  --bg: #0B0912;
+  --bg-elev: #141020;
+  --bg-card: #1B1729;
+  --bg-inset: #070510;
+  --border: #2E2742;
+  --border-subtle: #211B31;
+  --border-strong: #524670;
+  --text: #F1ECFA;
+  --text-dim: #A99FBB;
+  --text-muted: #776D8C;
+  --accent: #D4BFFF;
+  --accent-strong: #A98BF0;
+  --accent-hover: #BCA2F5;
+  --accent-soft: rgba(169,139,240, .14);
+  --accent-border: #C4ABFF;
   --success: #35C98A;
   --danger: #F0616B;
   --radius: 12px;
@@ -49,8 +49,8 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(90% 70% at 12% -10%, rgba(110, 123, 247, .22), transparent 60%),
-    radial-gradient(70% 60% at 100% 110%, rgba(75, 88, 220, .16), transparent 58%);
+    radial-gradient(90% 70% at 12% -10%, rgba(169,139,240, .22), transparent 60%),
+    radial-gradient(70% 60% at 100% 110%, rgba(169,139,240, .16), transparent 58%);
   pointer-events: none;
 }
 
@@ -70,7 +70,7 @@ body {
 .mark {
   width: 16px; height: 16px; border-radius: 5px;
   background: linear-gradient(140deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 0 0 3px var(--accent-soft), 0 4px 12px rgba(75, 88, 220, .4);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 4px 12px rgba(169,139,240, .4);
   position: relative;
 }
 .mark::after {
@@ -150,8 +150,8 @@ h1 { font-size: 21px; font-weight: 650; letter-spacing: -.01em; }
   height: 36px; padding: 0 26px; border-radius: var(--radius-sm);
   border: 1px solid var(--accent-border); cursor: pointer;
   background: linear-gradient(180deg, var(--accent-hover), var(--accent-strong));
-  color: #fff; font-family: var(--font); font-size: 13px; font-weight: 600;
-  box-shadow: 0 6px 20px rgba(110, 123, 247, .28);
+  color: #1A1030; font-family: var(--font); font-size: 13px; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(169,139,240, .28);
   transition: filter .12s ease, transform .12s ease;
 }
 .btn-primary:hover { filter: brightness(1.08); }
@@ -181,7 +181,7 @@ h1 { font-size: 21px; font-weight: 650; letter-spacing: -.01em; }
   display: block; height: 100%; width: 0;
   border-radius: 3px;
   background: linear-gradient(90deg, var(--accent-strong), var(--accent));
-  box-shadow: 0 0 12px rgba(146, 162, 255, .7);
+  box-shadow: 0 0 12px rgba(212,191,255, .7);
   transition: width .2s ease;
 }
 .progress-meta {

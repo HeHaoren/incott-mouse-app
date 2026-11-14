@@ -94,12 +94,36 @@ function syncSilentAvailability() {
   silent.closest('.settings-item').style.opacity = auto ? '' : '0.45';
 }
 
+/** 界面缩放：'auto' 按屏幕可用尺寸推算，否则用固定倍率 */
+function resolveUiScale(pref) {
+  if (pref && pref !== 'auto') {
+    const n = parseFloat(pref);
+    if (isFinite(n) && n >= 0.85 && n <= 2) return n;
+  }
+  const w = window.screen.availWidth || 1920;
+  const h = window.screen.availHeight || 1080;
+  const raw = Math.max(w / 1920, h / 1080);
+  // 1.00–1.30，按 0.05 台阶取整
+  return Math.min(1.3, Math.max(1, Math.round(raw * 20) / 20));
+}
+
+/** 只缩放字号与图标（--ui-scale），布局尺寸不动 */
+function applyUiScale(pref) {
+  const scale = resolveUiScale(pref);
+  document.documentElement.style.setProperty('--ui-scale', String(scale));
+  return scale;
+}
+
 /** 读取设置并回填开关 */
 async function loadSettings() {
   try {
     const s = await window.api.getSettings();
     $('#setAutoLaunch').checked = !!s.autoLaunch;
     $('#setSilentStart').checked = !!s.silentStart;
+    const sel = $('#setUiScale');
+    const allowed = ['auto', '1', '1.1', '1.25', '1.5'];
+    sel.value = allowed.includes(s.uiScale) ? s.uiScale : 'auto';
+    applyUiScale(sel.value);
     syncSilentAvailability();
   } catch (_) {
     /* 读设置失败静默 */
@@ -201,6 +225,15 @@ function bindEvents() {
     onSettingChange({ autoLaunch: e.target.checked }, 'settingsAutoLaunch', e.target.checked));
   $('#setSilentStart').addEventListener('change', (e) =>
     onSettingChange({ silentStart: e.target.checked }, 'settingsSilentStart', e.target.checked));
+  // 界面缩放：立即生效并落盘
+  $('#setUiScale').addEventListener('change', async (e) => {
+    applyUiScale(e.target.value);
+    try {
+      await window.api.setSettings({ uiScale: e.target.value });
+    } catch (_) {
+      toast(t('settingSaveFailed'), 'error');
+    }
+  });
   // 点击别处关闭语言/设置菜单
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.lang-wrap')) {
@@ -1399,4 +1432,6 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
+// 首帧先按自动值缩放，避免读完设置才跳一下
+applyUiScale('auto');
 init();

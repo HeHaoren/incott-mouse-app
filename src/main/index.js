@@ -54,6 +54,8 @@ function getSettings() {
     autoLaunch: !!app.getLoginItemSettings().openAtLogin,
     // 兼容旧键 startMinimized（0.2.1 及更早）
     silentStart: !!(s.silentStart != null ? s.silentStart : s.startMinimized),
+    // 界面缩放：'auto' 或倍率字符串（'1' / '1.1' / '1.25' / '1.5'）
+    uiScale: typeof s.uiScale === 'string' && s.uiScale ? s.uiScale : 'auto',
   };
 }
 
@@ -80,6 +82,9 @@ function setSettings(patch) {
   }
   if (patch.silentStart != null) {
     s.silentStart = !!patch.silentStart;
+  }
+  if (patch.uiScale != null) {
+    s.uiScale = String(patch.uiScale);
   }
   saveSettings(s);
   applyLoginItem(); // 两个开关都会影响自启参数，统一同步
@@ -700,6 +705,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // 允许 preload require 本地模块（shared/i18n）
+      backgroundThrottling: false, // 窗口被遮挡时不冻结渲染（电量/状态推送要持续更新）
     },
   });
 
