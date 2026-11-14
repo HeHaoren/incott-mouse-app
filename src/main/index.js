@@ -95,7 +95,7 @@ function setSettings(patch) {
 const EXEC_ACTIONS = {
   // 非 8K 接收器/有线时 2000Hz+ 会被硬件钳制为 1000Hz（实机验证），提前在应用层钳制
   setRate: (hz) => P.buildSetRate(P.clampRate(hz, deviceInfo ? deviceInfo.is8KReceiver : null)),
-  setDpi: (index, dpi, flag) => P.buildSetResolution(index, P.dpiToHw(dpi), flag || 0),
+  setDpi: (index, dpi, flag, color) => P.buildSetResolution(index, P.dpiToHw(dpi), flag || 0, color),
   setDpiLevel: (levels, curIndex) => P.buildSetDpiLevel(levels, curIndex),
   // PAW3950 的 LOD 需按官方 apply 流程做 UI→硬件码旋转（0→2, 1→0, 2→1）
   setLod: (hw) => P.buildSetLod(P.lodToHw(hw, deviceInfo ? deviceInfo.sensor : null)),
@@ -147,8 +147,11 @@ const READ_ACTIONS = {
   },
   resolution: {
     build: (slot) => P.buildReadResolution(slot),
-    // 0x82：buf[2..3] = DPI 硬件值（16 位小端）
-    parse: (buf) => P.hwToDpi(buf[2] | (buf[3] << 8)),
+    // 0x82：buf[2..3] = DPI 硬件值（16 位小端）；buf[4..6] = 该档灯色（RGB，全 0 = 未设置）
+    parse: (buf) => ({
+      dpi: P.hwToDpi(buf[2] | (buf[3] << 8)),
+      color: P.bytesToColor(buf),
+    }),
   },
   dpiLevel: {
     build: () => P.buildReadDpiLevel(),

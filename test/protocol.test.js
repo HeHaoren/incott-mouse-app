@@ -33,6 +33,27 @@ test('DPI 档位值命令：[2, ix, lo, hi, 0,0,0, flag]', () => {
   assert.deepEqual([...P.buildSetResolution(0, 639, 1)], [2, 0, 127, 2, 0, 0, 0, 1]);
 });
 
+test('DPI 档位灯色写进 buf[4..6]（官方驱动恒填 0）', () => {
+  // 不传颜色 → 三个字节保持 0，与旧行为完全一致
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, null)], [2, 0, 31, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, '#ff0000')], [2, 0, 31, 0, 255, 0, 0, 0]);
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, '#00ff00')], [2, 0, 31, 0, 0, 255, 0, 0]);
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, '#0000ff')], [2, 0, 31, 0, 0, 0, 255, 0]);
+  // 三位缩写与非法值
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, '#0f0')], [2, 0, 31, 0, 0, 255, 0, 0]);
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, 'nope')], [2, 0, 31, 0, 0, 0, 0, 0]);
+  // .ict 的 dpicolor 是 0xBBGGRR 整数：0x0000FF = 红
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, 0x0000ff)], [2, 0, 31, 0, 255, 0, 0, 0]);
+  assert.deepEqual([...P.buildSetResolution(0, 31, 0, 0xff0000)], [2, 0, 31, 0, 0, 0, 255, 0]);
+  // XY 分离时颜色两条都要带
+  assert.deepEqual([...P.buildSetResolution(1, 15, 2, '#ff8800')], [2, 1, 15, 0, 255, 136, 0, 2]);
+  // 回读还原
+  assert.equal(P.bytesToColor([130, 0, 31, 0, 255, 0, 0, 0]), '#ff0000');
+  assert.equal(P.bytesToColor([130, 0, 31, 0, 0, 136, 255, 0]), '#0088ff');
+  // 全 0 = 该档没存过颜色
+  assert.equal(P.bytesToColor([130, 0, 31, 0, 0, 0, 0, 0]), '#000000');
+});
+
 test('DPI 档位切换：[3, levels, cur]', () => {
   assert.deepEqual([...P.buildSetDpiLevel(6, 2)], [3, 6, 2, 0, 0, 0, 0, 0]);
 });

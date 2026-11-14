@@ -271,17 +271,34 @@
       <!-- 灯效 -->
       <section id="tab-lighting" class="tab">
         <div class="tab-header"><h2 data-i18n="lightingTitle">灯效</h2></div>
-        <p class="hint" data-i18n="lightingHint">设置 8K 接收器的指示灯模式，直观显示当前回报率或电量。</p>
         <div class="perf-grid">
           <div class="perf-card">
-            <h3 data-i18n="ledReceiverTitle">接收器指示灯</h3>
-            <div id="ledList" class="rate-list"></div>
-            <div id="ledDesc" class="opt-desc"></div>
+            <h3 data-i18n="ledReceiverTitle">接收器灯效</h3>
+            <div id="ledList" class="led-mode-list"></div>
+            <div class="led-detail">
+              <p class="led-detail-text" id="ledDesc"></p>
+              <div class="led-gradient" id="ledGradient"></div>
+              <div class="led-swatches" id="ledSwatches"></div>
+            </div>
             <div id="ledNote" class="opt-desc warn"></div>
+            <div class="led-foot" data-i18n="ledColorNote">颜色由接收器固件控制，不可自定义</div>
           </div>
           <div class="perf-card">
-            <h3 data-i18n="ledBodyTitle">鼠标本体灯效</h3>
-            <div class="opt-desc" data-i18n="ledBodyUnsupported">本型号本体 RGB 的 HID 命令未包含在官方网页驱动中（官方仅原生驱动支持），暂无法通过本工具设置。</div>
+            <h3 data-i18n="ledBodyTitle">鼠标本体指示灯</h3>
+            <div class="led-body">
+              <svg class="led-body-art" viewBox="0 0 44 62" aria-hidden="true">
+                <path d="M22 3c9.4 0 16 6.6 16 16.2v23.6C38 53.4 31.4 59 22 59S6 53.4 6 42.8V19.2C6 9.6 12.6 3 22 3z"
+                      fill="none" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M22 6v16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                <path d="M8 24h28" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                <circle class="led-body-dot" cx="15.5" cy="33.5" r="2.6"/>
+              </svg>
+              <ul class="led-body-facts">
+                <li><span class="led-fact-k" data-i18n="ledBodyPosKey">位置</span><span class="led-fact-v" data-i18n="ledBodyPosVal">DPI 键处</span></li>
+                <li><span class="led-fact-k" data-i18n="ledBodyTrigKey">触发</span><span class="led-fact-v" data-i18n="ledBodyTrigVal">切换 DPI 档位时短暂亮起</span></li>
+                <li><span class="led-fact-k" data-i18n="ledBodyCtrlKey">控制</span><span class="led-fact-v" data-i18n="ledBodyCtrlVal">由固件决定，本工具与官方网页驱动均无对应设置项</span></li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>

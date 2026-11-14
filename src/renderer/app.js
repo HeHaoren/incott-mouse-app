@@ -301,6 +301,7 @@ function bindEvents() {
     state.battery = null;
     state.batteryCharging = false;
     renderDevice();
+    renderLighting(); // 灯效页依赖 8K 接收器信息，断开后必须回落到禁用态
     setDeviceLabel(t('deviceDisconnected'), true);
     showToast(t('deviceDisconnected'));
   });
@@ -365,6 +366,7 @@ async function onConnect() {
     state.battery = null;
     state.batteryCharging = false;
     renderDevice();
+    renderLighting(); // 同上：断开后灯效选项要一起变灰
     setDeviceLabel(t('notConnected'));
     return;
   }
@@ -395,6 +397,8 @@ async function onConnect() {
     } catch (e) {
       /* 读档位失败不阻塞连接 */
     }
+    // 读取每档的实际灯色（buf[4..6]）。全 0 表示设备没存过颜色，保留 UI 当前值
+    await syncDpiColors();
     // 8K 接收器：读当前指示灯模式（读不到不阻塞，保持默认）
     if (state.modelInfo && state.modelInfo.is8KReceiver) {
       try {
@@ -778,6 +782,25 @@ function syncDpiLevels(levels, current) {
   }
 }
 
+/**
+ * 从设备回读每档 DPI 的灯色（命令 2 的 buf[4..6]）。
+ * 全 0（#000000）表示该档没存过颜色、固件走默认，此时保留 UI 当前值，
+ * 否则连上设备就会把卡片全刷成黑色，反而看不出自己设过的颜色。
+ */
+async function syncDpiColors() {
+  for (let i = 0; i < state.dpiLevels.length; i++) {
+    let res;
+    try {
+      res = await window.api.read('resolution', i);
+    } catch (_) {
+      return; // 该固件不支持回读，整轮放弃（不阻塞连接）
+    }
+    if (!res || typeof res.color !== 'string') continue;
+    if (res.color === '#000000') continue;
+    state.dpiLevels[i].color = res.color;
+  }
+}
+
 // ── 性能 ───────────────────────────────────────────────────
 function renderPerformance() {
   if (!state.constants) return;
@@ -826,32 +849,90 @@ function renderPerformance() {
   });
 }
 
-// ── 灯效（接收器指示灯）─────────────────────────────────────
-const LED_DESC_KEYS = { 0: 'ledRateDesc', 1: 'ledBatteryDesc', 2: 'ledLowBatteryDesc' };
+// ── 灯效（接收器灯效）─────────────────────────────────────
+// 说明文案取自官方网页驱动（text_sc-v106.js msg75/76/77），颜色对照同源
+const LED_DESC_KEYS = { 0: 'ledRateDesc', 1: 'ledBatteryDesc', 2: 'ledLowDesc' };
+const LED_COLORS = {
+  red: '#F0616B', blue: '#5B9BFF', yellow: '#F2CE4B', orange: '#F0851F',
+  purple: '#A98BF0', green: '#35C98A', white: '#F2EEFA',
+};
+// [标签, 颜色键, 附加类]；标签为 null 时用 i18n 的 ledChargingSwatch
+const LED_SWATCHES = {
+  0: [['125Hz', 'red'], ['250Hz', 'blue'], ['500Hz', 'yellow'], ['1000Hz', 'orange'],
+      ['2000Hz', 'purple'], ['4000Hz', 'green'], ['8000Hz', 'white']],
+  1: [['100%', 'green'], ['66%', 'yellow'], ['33%', 'orange'], ['0%', 'red']],
+  2: [[null, 'red', 'blink']],
+};
+const LED_GRADIENT = { 1: ['green', 'yellow', 'orange', 'red'] };
 
 function renderLighting() {
   if (!state.constants || !state.constants.ledModeTable) return;
   const list = $('#ledList');
+  if (!list) return;
   const note = $('#ledNote');
   const desc = $('#ledDesc');
-  if (!list) return;
+  const gradient = $('#ledGradient');
+  const swatches = $('#ledSwatches');
+
   // 仅 8K 接收器支持（实机验证命令 8 只对 8K 接收器有效）
   const supported = !!(state.modelInfo && state.modelInfo.is8KReceiver);
+  const mode = LED_DESC_KEYS[state.receiverLed] ? state.receiverLed : 0;
+
   list.innerHTML = '';
   state.constants.ledModeTable.forEach((m) => {
-    const chip = document.createElement('button');
-    chip.className = 'rate-chip' + (m.value === state.receiverLed ? ' selected' : '');
-    chip.textContent = t(m.key);
-    chip.disabled = !supported;
-    chip.style.opacity = supported ? '' : '0.45';
-    chip.addEventListener('click', () => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'led-mode' + (m.value === state.receiverLed ? ' selected' : '');
+    item.dataset.mode = String(m.value);
+    item.disabled = !supported;
+    item.setAttribute('aria-pressed', String(m.value === state.receiverLed));
+
+    const dot = document.createElement('span');
+    dot.className = 'led-mode-dot';
+    dot.setAttribute('aria-hidden', 'true');
+
+    const title = document.createElement('span');
+    title.textContent = t(m.key);
+
+    item.append(dot, title);
+    item.addEventListener('click', () => {
+      if (!supported) return;
       state.receiverLed = m.value;
       renderLighting();
     });
-    list.appendChild(chip);
+    list.appendChild(item);
   });
-  if (desc) desc.textContent = supported ? t(LED_DESC_KEYS[state.receiverLed] || 'ledRateDesc') : '';
-  if (note) note.textContent = supported ? '' : t('ledNeed8K');
+
+  // 选中模式对应的颜色说明（官方原文）
+  if (desc) desc.textContent = t(LED_DESC_KEYS[mode]);
+  if (gradient) {
+    const stops = LED_GRADIENT[mode];
+    gradient.style.display = stops ? '' : 'none';
+    if (stops) {
+      const step = 100 / (stops.length - 1);
+      gradient.style.background = `linear-gradient(90deg, ${stops
+        .map((c, i) => `${LED_COLORS[c]} ${Math.round(i * step)}%`)
+        .join(', ')})`;
+    }
+  }
+  if (swatches) {
+    swatches.innerHTML = '';
+    (LED_SWATCHES[mode] || []).forEach(([label, colorKey, extra]) => {
+      const chip = document.createElement('span');
+      chip.className = 'led-swatch' + (extra ? ' ' + extra : '');
+      chip.style.setProperty('--sw', LED_COLORS[colorKey]);
+      const dot = document.createElement('i');
+      dot.setAttribute('aria-hidden', 'true');
+      chip.append(dot, document.createTextNode(label || t('ledChargingSwatch')));
+      swatches.appendChild(chip);
+    });
+  }
+
+  if (note) {
+    if (!state.connected) note.textContent = t('ledNeedConnect');
+    else if (!supported) note.textContent = t('ledNeed8K');
+    else note.textContent = '';
+  }
 }
 
 // ── Profile ────────────────────────────────────────────────
@@ -1179,12 +1260,14 @@ function buildApplyOps() {
   });
 
   // DPI 档位值（传实际 DPI，主进程 setDpi 内部转硬件值）
+  // 每档的灯色也走同一条命令的 buf[4..6]，官方驱动恒填 0（这就是"改灯色不生效"的原因）
   state.dpiLevels.forEach((lv, i) => {
+    const color = lv.color || null;
     if (state.xySplit && lv.x !== lv.y) {
-      ops.push({ action: 'setDpi', args: [i, lv.x, 1] }); // X 轴
-      ops.push({ action: 'setDpi', args: [i, lv.y, 2] }); // Y 轴
+      ops.push({ action: 'setDpi', args: [i, lv.x, 1, color] }); // X 轴
+      ops.push({ action: 'setDpi', args: [i, lv.y, 2, color] }); // Y 轴
     } else {
-      ops.push({ action: 'setDpi', args: [i, lv.x, 0] });
+      ops.push({ action: 'setDpi', args: [i, lv.x, 0, color] });
     }
   });
 

@@ -253,12 +253,53 @@ function buildSetRate(hz) {
   return cmd(1, entry.code);
 }
 
-/** DPI 档位值：[2, index, dpiHwLow, dpiHwHigh, 0,0,0, flag] */
-function buildSetResolution(index, hwValue, flag = 0) {
+/**
+ * 每档 DPI 灯色在命令 2 的 buf[4..6] 里的字节顺序（实机校准 2026-11-14）。
+ * 官方网页驱动这三个字节恒填 0，导致"改颜色不生效"；固件本身是收这三个字节的。
+ */
+const DPI_COLOR_ORDER = ['r', 'g', 'b']; // buf[4]=r, buf[5]=g, buf[6]=b
+
+/** CSS 颜色（#RRGGBB / #RGB / RGB 整数 0xBBGGRR）→ 三字节灯色数组 */
+function colorToBytes(color) {
+  const zero = [0, 0, 0];
+  if (color == null) return zero;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (typeof color === 'number') {
+    // .ict 的 dpicolor 是 0xBBGGRR 整数
+    r = color & 0xff;
+    g = (color >> 8) & 0xff;
+    b = (color >> 16) & 0xff;
+  } else {
+    const hex = String(color).trim().replace(/^#/, '');
+    if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(hex)) return zero;
+    const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+    const n = parseInt(full, 16);
+    r = (n >> 16) & 0xff;
+    g = (n >> 8) & 0xff;
+    b = n & 0xff;
+  }
+  const ch = { r, g, b };
+  return DPI_COLOR_ORDER.map((k) => ch[k]);
+}
+
+/** 从 0x82 回读的 buf 里还原灯色 → '#RRGGBB'；全 0 表示未设置（固件默认）*/
+function bytesToColor(buf) {
+  const ch = {};
+  DPI_COLOR_ORDER.forEach((k, i) => {
+    ch[k] = buf[4 + i] & 0xff;
+  });
+  return '#' + [ch.r, ch.g, ch.b].map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+/** DPI 档位值：[2, index, dpiHwLow, dpiHwHigh, r,g,b, flag] */
+function buildSetResolution(index, hwValue, flag = 0, color = null) {
   if (hwValue < 0 || hwValue > 0xffff) throw new RangeError(`DPI 硬件值越界: ${hwValue}`);
   const lo = hwValue & 0xff;
   const hi = (hwValue >> 8) & 0xff;
-  return cmd(2, index, lo, hi, 0, 0, 0, flag);
+  const [c4, c5, c6] = colorToBytes(color);
+  return cmd(2, index, lo, hi, c4, c5, c6, flag);
 }
 
 /** DPI 档位切换：[3, levels, curIndex] */
@@ -320,7 +361,7 @@ function buildMacroBlock(totalBlocks, blockIndex, slotId) {
 const LED_MODE_TABLE = [
   { value: 0, key: 'ledRate' }, // 回报率指示
   { value: 1, key: 'ledBattery' }, // 电量指示
-  { value: 2, key: 'ledLowBattery' }, // 仅低电量警告
+  { value: 2, key: 'ledLow' }, // 仅警告电池
 ];
 
 /** 接收器 LED：[8, mode]，mode 取 LED_MODE_TABLE 的 value */
@@ -472,6 +513,10 @@ module.exports = {
   dpiToHw,
   hwToDpi,
   maxDpiForSensor,
+  // DPI 档位灯色
+  DPI_COLOR_ORDER,
+  colorToBytes,
+  bytesToColor,
   // LOD / 回报率 / 型号
   lodToHw,
   isRateSupported,
