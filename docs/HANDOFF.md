@@ -9,7 +9,7 @@
 ## 线上地址
 
 - 源码：https://github.com/HeHaoren/incott-mouse-app
-- 安装包：https://github.com/HeHaoren/incott-mouse-app/releases/tag/v1.0.0
+- 安装包：https://github.com/HeHaoren/incott-mouse-app/releases/tag/v1.0.1
 
 ## 已完成功能
 
