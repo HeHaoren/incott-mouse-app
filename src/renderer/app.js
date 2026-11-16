@@ -39,6 +39,14 @@ const state = {
 const $ = (sel) => document.querySelector(sel);
 const t = (key) => window.i18n.t(key);
 
+/**
+ * 档位颜色：固定为官方默认六色（红/蓝/绿/黄/青/品红），界面与 .ict 存档都用这套，
+ * 不给用户改的入口。鼠标指示灯的颜色由固件按「回报率 / 电量」决定（官方手册 §5.4），
+ * 命令 2 的 buf[4..6] 虽然能写能回读，但固件只存不用 —— 开放改色只会误导。
+ */
+const DPI_LEVEL_COLORS = ['#ff0000', '#0000ff', '#00ff00', '#ffff00', '#00ffff', '#ff00ff'];
+const dpiColorAt = (i) => DPI_LEVEL_COLORS[i % DPI_LEVEL_COLORS.length];
+
 
 /** 应用 i18n：替换所有带 data-i18n 属性的静态文案 */
 function applyI18n() {
@@ -413,7 +421,6 @@ async function onConnect() {
       } catch (_) {
         /* 读档位失败不阻塞连接 */
       }
-      await syncDpiColors();
     }
     renderAll();
     await refreshBattery();
@@ -550,9 +557,9 @@ function renderDevicePanel() {
   if (profEl) profEl.textContent = state.connected ? `${(state.profile || 0) + 1} / ${profileCount()}` : '—';
 
   // 面板灯效颜色跟随当前档位色（仅连接时点亮，未连接保持熄灭）
-  if (on && lv && lv.color) {
+  if (on) {
     panel.classList.add('dpi-colored');
-    panel.style.setProperty('--led-color', lv.color);
+    panel.style.setProperty('--led-color', dpiColorAt(state.currentDpi));
   } else {
     panel.classList.remove('dpi-colored');
   }
@@ -670,10 +677,10 @@ function renderDpi() {
     body.className = 'dpi-body';
 
     if (state.xySplit) {
-      body.appendChild(dpiRow('X', i, 'x', lv.color));
-      body.appendChild(dpiRow('Y', i, 'y', lv.color));
+      body.appendChild(dpiRow('X', i, 'x', dpiColorAt(i)));
+      body.appendChild(dpiRow('Y', i, 'y', dpiColorAt(i)));
     } else {
-      body.appendChild(dpiRow('', i, 'x', lv.color));
+      body.appendChild(dpiRow('', i, 'x', dpiColorAt(i)));
     }
 
     // 档位标识色：只影响界面（滑杆/面板灯点）和 .ict 存档，不写到鼠标 ——
@@ -681,7 +688,7 @@ function renderDpi() {
     // 显示不同颜色"这回事；命令 2 的 buf[4..6] 能写能回读，但固件只存不用（2026-11-15 A/B 证实）。
     const swatch = document.createElement('span');
     swatch.className = 'dpi-swatch';
-    swatch.style.setProperty('--sw', lv.color);
+    swatch.style.setProperty('--sw', dpiColorAt(i));
     swatch.title = t('dpiColorNote');
     swatch.setAttribute('aria-hidden', 'true');
 
@@ -782,32 +789,13 @@ function snapDpi(v) {
 function syncDpiLevels(levels, current) {
   const last = state.dpiLevels[state.dpiLevels.length - 1] || { x: 800, y: 800, color: '#4da3ff' };
   while (state.dpiLevels.length < levels) {
-    state.dpiLevels.push({ x: last.x, y: last.y, color: last.color });
+    state.dpiLevels.push({ x: last.x, y: last.y, color: dpiColorAt(state.dpiLevels.length) });
   }
   if (state.dpiLevels.length > levels) {
     state.dpiLevels.length = levels;
   }
   if (current >= 0 && current < state.dpiLevels.length) {
     state.currentDpi = current;
-  }
-}
-
-/**
- * 从设备回读每档 DPI 的灯色（命令 2 的 buf[4..6]）。
- * 全 0（#000000）表示该档没存过颜色、固件走默认，此时保留 UI 当前值，
- * 否则连上设备就会把卡片全刷成黑色，反而看不出自己设过的颜色。
- */
-async function syncDpiColors() {
-  for (let i = 0; i < state.dpiLevels.length; i++) {
-    let res;
-    try {
-      res = await window.api.read('resolution', i);
-    } catch (_) {
-      return; // 该固件不支持回读，整轮放弃（不阻塞连接）
-    }
-    if (!res || typeof res.color !== 'string') continue;
-    if (res.color === '#000000') continue;
-    state.dpiLevels[i].color = res.color;
   }
 }
 
@@ -986,12 +974,12 @@ function renderLighting() {
 // 官方桌面驱动的 5 个「配置」(Language/ch.xml str_profile1..5) 都是 PC 端预设，
 // 切换时把整套配置灌进鼠标。本工具按同样语义实现。
 const DEFAULT_DPI_LEVELS = [
-  { x: 400, y: 400, color: '#ff4d4d' },
-  { x: 800, y: 800, color: '#4da3ff' },
-  { x: 1600, y: 1600, color: '#3fb950' },
-  { x: 2400, y: 2400, color: '#ffd700' },
-  { x: 3200, y: 3200, color: '#22d3ee' },
-  { x: 6400, y: 6400, color: '#ff4dff' },
+  { x: 400, y: 400, color: dpiColorAt(0) },
+  { x: 800, y: 800, color: dpiColorAt(1) },
+  { x: 1600, y: 1600, color: dpiColorAt(2) },
+  { x: 2400, y: 2400, color: dpiColorAt(3) },
+  { x: 3200, y: 3200, color: dpiColorAt(4) },
+  { x: 6400, y: 6400, color: dpiColorAt(5) },
 ];
 
 const DEFAULT_BUTTONS = [
@@ -1168,14 +1156,11 @@ function applyDeviceSnapshot(snap) {
   const p = state.profiles[slot] || defaultProfile();
 
   if (Array.isArray(snap.slots) && snap.slots.length) {
-    p.dpiLevels = snap.slots.map((s, i) => {
-      const base = p.dpiLevels[i] || DEFAULT_DPI_LEVELS[i] || DEFAULT_DPI_LEVELS[0];
-      return {
-        x: s.dpi,
-        y: s.dpi,
-        color: s.color && s.color !== '#000000' ? s.color : base.color,
-      };
-    });
+    p.dpiLevels = snap.slots.map((s, i) => ({
+      x: s.dpi,
+      y: s.dpi,
+      color: dpiColorAt(i), // 颜色固定，忽略设备里存的旧字节
+    }));
   }
   if (snap.current != null) p.currentDpi = snap.current;
   if (snap.rate) p.rate = snap.rate;
@@ -1576,7 +1561,7 @@ function buildApplyOps() {
   // DPI 档位值（传实际 DPI，主进程 setDpi 内部转硬件值）
   // 每档的灯色也走同一条命令的 buf[4..6]，官方驱动恒填 0（这就是"改灯色不生效"的原因）
   state.dpiLevels.forEach((lv, i) => {
-    const color = lv.color || null;
+    const color = dpiColorAt(i);
     if (state.xySplit && lv.x !== lv.y) {
       ops.push({ action: 'setDpi', args: [i, lv.x, 1, color] }); // X 轴
       ops.push({ action: 'setDpi', args: [i, lv.y, 2, color] }); // Y 轴
@@ -1636,7 +1621,7 @@ function buildProfileExport() {
     sleepTime: state.sleepTime,
     receiverLed: state.receiverLed,
     currentDpi: state.currentDpi,
-    dpiLevels: state.dpiLevels,
+    dpiLevels: state.dpiLevels.map((lv, i) => ({ ...lv, color: dpiColorAt(i) })),
     buttons: state.buttons,
   };
 }
@@ -1665,7 +1650,7 @@ async function onImportProfile() {
 
 function applyImportedProfile(p) {
   if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
-    state.dpiLevels = p.dpiLevels.map((lv) => ({ x: lv.x, y: lv.y, color: lv.color }));
+    state.dpiLevels = p.dpiLevels.map((lv, i) => ({ x: lv.x, y: lv.y, color: dpiColorAt(i) }));
     // X/Y 不一致时自动打开 XY 分离显示
     state.xySplit = p.dpiLevels.some((lv) => lv.x !== lv.y);
   }
@@ -1742,10 +1727,10 @@ function normalizeProfile(p) {
   if (!p || typeof p !== 'object') return base;
   const out = { ...base };
   if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
-    out.dpiLevels = p.dpiLevels.map((lv) => ({
+    out.dpiLevels = p.dpiLevels.map((lv, i) => ({
       x: Number(lv.x) || base.dpiLevels[0].x,
       y: Number(lv.y) || Number(lv.x) || base.dpiLevels[0].y,
-      color: typeof lv.color === 'string' ? lv.color : base.dpiLevels[0].color,
+      color: dpiColorAt(i), // 颜色固定为官方六色，不受旧存档影响
     }));
   }
   if (p.currentDpi != null) out.currentDpi = clamp(p.currentDpi, 0, out.dpiLevels.length - 1);
