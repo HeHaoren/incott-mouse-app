@@ -27,6 +27,8 @@ let mainWindow = null;
 let tray = null; // 托盘图标
 let trayPopover = null; // 托盘单击弹出的信息浮层
 let trayClickTimer = null; // 区分托盘单击/双击的延时句柄
+let lastTrayDoubleClickAt = 0; // 上次托盘双击时间（用来吞掉双击后面残留的那个 click）
+let lastShowMainAt = 0; // 上次显示主窗口时间（双击被重复派发时防止 show/focus 两下）
 let batteryLevel = null; // 最近一次读到的电量（托盘显示）
 let batteryCharging = false; // 充电中标志（0x89 buf[1] bit7 / 推送 b0 bit7）
 let lastPushDpi = null; // 上一次推送的 DPI 索引（用于检测鼠标 DPI 键切换）
@@ -874,6 +876,9 @@ function createTrayIcon(color = TRAY_COLORS.default) {
 
 function showMainWindow() {
   if (trayPopover) trayPopover.hide(); // 打开主窗口时收起浮层
+  // Windows 上双击托盘有时会派发两次 double-click，重复 show/focus 会让窗口闪一下
+  if (Date.now() - lastShowMainAt < 300) return;
+  lastShowMainAt = Date.now();
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();
@@ -1085,6 +1090,9 @@ app.whenReady().then(async () => {
   // Windows 上双击会先送来 click 事件，所以单击要压一个延时等第二次点击，
   // 收到 double-click 时立即取消，避免「双击时先闪一下浮层」。
   tray.on('click', () => {
+    // 双击序列是 click → click → double-click，个别情况后面还会补一个 click；
+    // 那个残尾若被 200ms 定时器接住，就会在打开主窗口之后又弹出浮层（"弹两下"）
+    if (Date.now() - lastTrayDoubleClickAt < TRAY_CLICK_DELAY + 400) return;
     if (trayClickTimer) {
       clearTimeout(trayClickTimer);
       trayClickTimer = null;
@@ -1099,6 +1107,7 @@ app.whenReady().then(async () => {
     }, TRAY_CLICK_DELAY);
   });
   tray.on('double-click', () => {
+    lastTrayDoubleClickAt = Date.now();
     if (trayClickTimer) {
       clearTimeout(trayClickTimer);
       trayClickTimer = null;
