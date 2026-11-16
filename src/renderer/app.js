@@ -25,9 +25,12 @@ const state = {
   angleSnap: false,
   motionSync: false,
   debounce: 8,
-  sleepTime: 600,
+  sensorMode: 2, // 性能模式：3=电竞 2=标准 1=节能（0x84 sub5 回读，G24 实测 2）
+  sleepTime: 60, // 节能调节（秒），官方档位 10~900
   receiverLed: 0, // 接收器指示灯模式 0=回报率 1=电量 2=仅低电量
-  profile: 0,
+  profile: 0, // 当前配置序号 0..4
+  profiles: [], // 5 份配置预设（硬件只有 1 份，见 protocol.js PROFILE_COUNT）
+  switching: false, // 正在切换配置（写入整套配置，避免并发）
   buttons: [], // [{ type: 'mouse'|'keyboard'|'media'|'macro', value }]
   macros: [], // [{ slot, name, loopType, cycle, items: [{press, keyCode, delay}] }]
   currentMacro: 0,
@@ -35,6 +38,7 @@ const state = {
 
 const $ = (sel) => document.querySelector(sel);
 const t = (key) => window.i18n.t(key);
+
 
 /** 应用 i18n：替换所有带 data-i18n 属性的静态文案 */
 function applyI18n() {
@@ -328,17 +332,26 @@ function bindEvents() {
   $('#debounce').addEventListener('change', (e) => {
     state.debounce = clamp(parseInt(e.target.value) || 0, 0, 30);
   });
-  $('#sleepTime').addEventListener('change', (e) => {
-    state.sleepTime = parseInt(e.target.value, 10) || 600;
-  });
+  // 节能调节：官方是 ± 逐档切换固定档位（10..900s）
+  $('#sleepDown').addEventListener('click', () => stepSleep(-1));
+  $('#sleepUp').addEventListener('click', () => stepSleep(1));
 
-  // Profile
+  // 板载配置：切换即把该份预设整套写入鼠标（硬件只有 1 份配置）
   document.querySelectorAll('.profile-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      state.profile = parseInt(btn.dataset.profile);
-      renderProfile();
+      switchProfile(parseInt(btn.dataset.profile, 10));
     });
   });
+  // 鼠标上的配置切换键：硬件只改序号，界面把对应预设灌进去
+  if (window.api.onProfile) {
+    window.api.onProfile((idx) => {
+      if (!state.connected || state.switching) return;
+      // 自己写入后设备也会回显序号，2 位字段还会把第 5 个配置回显成 0，2.5s 内一律忽略
+      if (Date.now() - lastWriteAt < 2500) return;
+      if (idx === state.profile) return;
+      switchProfile(idx);
+    });
+  }
 
   // 宏编辑器
   $('#macroLoopType').addEventListener('change', (e) => {
@@ -388,40 +401,36 @@ async function onConnect() {
     setDeviceLabel(t('readingConfig'));
     renderDevice();
 
-    // 读取鼠标实际的 DPI 档位配置（档位数 + 当前档位），对齐 UI
+    // 一次性读回整套配置（配置序号 / DPI 档位与灯色 / 回报率 / LOD / 按键 / 节能时间）
     try {
-      const dpi = await window.api.read('dpiLevel');
-      if (dpi && dpi.levels > 0) {
-        syncDpiLevels(dpi.levels, dpi.current);
-      }
+      const snap = await window.api.readConfig();
+      applyDeviceSnapshot(snap);
     } catch (e) {
-      /* 读档位失败不阻塞连接 */
-    }
-    // 读取每档的实际灯色（buf[4..6]）。全 0 表示设备没存过颜色，保留 UI 当前值
-    await syncDpiColors();
-    // 8K 接收器：读当前指示灯模式（读不到不阻塞，保持默认）
-    if (state.modelInfo && state.modelInfo.is8KReceiver) {
+      // 老固件不支持整套读取时退回逐条读（DPI 档位数 + 每档灯色）
       try {
-        const led = await window.api.read('receiverLed');
-        if (typeof led === 'number' && led >= 0 && led <= 2) state.receiverLed = led;
+        const dpi = await window.api.read('dpiLevel');
+        if (dpi && dpi.levels > 0) syncDpiLevels(dpi.levels, dpi.current);
       } catch (_) {
-        /* 该固件可能不支持回读 */
+        /* 读档位失败不阻塞连接 */
       }
+      await syncDpiColors();
     }
-    renderLighting();
-    renderDpi();
+    renderAll();
     await refreshBattery();
     setDeviceLabel(st.isWireless ? t('connectedWireless') : t('connectedWired'));
     hideToast(); // 清掉可能残留的「已断开」提示
     hideSpinner();
   } catch (e) {
     hideSpinner();
-    // 去掉 Electron IPC 包装前缀，只显示真正的原因
-    const msg = String(e && e.message ? e.message : e)
-      .replace(/^Error invoking remote method '[^']+':\s*/, '')
-      .replace(/^Error:\s*/, '');
-    setDeviceLabel(t('connectFailed') + msg, true);
+    setDeviceLabel(t('connectFailed') + errMsg(e), true);
   }
+}
+
+/** 去掉 Electron IPC 包装前缀，只显示真正的原因 */
+function errMsg(e) {
+  return String(e && e.message ? e.message : e)
+    .replace(/^Error invoking remote method '[^']+':\s*/, '')
+    .replace(/^Error:\s*/, '');
 }
 
 /** 应用 0x8F 型号信息：决定 DPI 上限（按传感器）与回报率可选范围（按 8K 接收器） */
@@ -538,7 +547,7 @@ function renderDevicePanel() {
   }
 
   const profEl = $('#statProfile');
-  if (profEl) profEl.textContent = state.connected ? `${(state.profile || 0) + 1} / 5` : '—';
+  if (profEl) profEl.textContent = state.connected ? `${(state.profile || 0) + 1} / ${profileCount()}` : '—';
 
   // 面板灯效颜色跟随当前档位色（仅连接时点亮，未连接保持熄灭）
   if (on && lv && lv.color) {
@@ -580,6 +589,9 @@ async function onBatteryClick() {
     showToast(`${t('batteryLabel')} ${state.battery}%${charging}`);
   }
 }
+
+// 最近一次「整套写入鼠标」的时间：用于忽略自身写入引起的配置序号回显
+let lastWriteAt = 0;
 
 // ── Toast ──────────────────────────────────────────────────
 let toastTimer = null;
@@ -664,16 +676,14 @@ function renderDpi() {
       body.appendChild(dpiRow('', i, 'x', lv.color));
     }
 
-    const color = document.createElement('input');
-    color.type = 'color';
-    color.className = 'dpi-color';
-    color.value = lv.color;
-    color.addEventListener('input', (e) => {
-      state.dpiLevels[i].color = e.target.value;
-      card.querySelectorAll('.dpi-slider').forEach((slider) => {
-        slider.style.accentColor = e.target.value;
-      });
-    });
+    // 档位标识色：只影响界面（滑杆/面板灯点）和 .ict 存档，不写到鼠标 ——
+    // 鼠标指示灯的颜色由固件按「回报率 / 电量」决定（官方说明书 §5.4），没有"按 DPI 档位
+    // 显示不同颜色"这回事；命令 2 的 buf[4..6] 能写能回读，但固件只存不用（2026-11-15 A/B 证实）。
+    const swatch = document.createElement('span');
+    swatch.className = 'dpi-swatch';
+    swatch.style.setProperty('--sw', lv.color);
+    swatch.title = t('dpiColorNote');
+    swatch.setAttribute('aria-hidden', 'true');
 
     const rm = document.createElement('button');
     rm.className = 'dpi-remove';
@@ -683,10 +693,10 @@ function renderDpi() {
 
     card.appendChild(idx);
     card.appendChild(body);
-    card.appendChild(color);
+    card.appendChild(swatch);
     card.appendChild(rm);
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.dpi-remove') || e.target.closest('.dpi-color') ||
+      if (e.target.closest('.dpi-remove') || e.target.closest('.dpi-swatch') ||
           e.target.closest('.dpi-value-input') || e.target.closest('.dpi-slider')) return;
       state.currentDpi = i;
       renderDpi();
@@ -802,6 +812,13 @@ async function syncDpiColors() {
 }
 
 // ── 性能 ───────────────────────────────────────────────────
+// 性能模式：官方 UI 顺序 电竞|标准|节能，协议值 3/2/1（0x84 sub5）
+const SENSOR_MODES = [
+  { value: 3, key: 'modeEsports', descKey: 'modeEsportsDesc' },
+  { value: 2, key: 'modeStandard', descKey: 'modeStandardDesc' },
+  { value: 1, key: 'modeEco', descKey: 'modeEcoDesc' },
+];
+
 function renderPerformance() {
   if (!state.constants) return;
   // 轮询率：非 8K 接收器（含有线）只提供 ≤1000Hz（硬件会钳制，实机验证）
@@ -847,6 +864,34 @@ function renderPerformance() {
     });
     lodList.appendChild(chip);
   });
+
+  // 性能模式（官方 0x84 sub5：3=电竞 2=标准 1=节能）
+  const modeList = $('#modeList');
+  if (modeList) {
+    const esportsBlocked = state.rate > 1000; // 官方：8K/2000Hz+ 已是最佳性能，不能开电竞
+    modeList.innerHTML = '';
+    SENSOR_MODES.forEach((m) => {
+      const chip = document.createElement('button');
+      const disabled = m.value === 3 && esportsBlocked;
+      chip.className = 'rate-chip' + (m.value === state.sensorMode ? ' selected' : '');
+      chip.textContent = t(m.key);
+      chip.disabled = disabled;
+      chip.title = disabled ? t('mode8kNote') : t(m.descKey);
+      chip.addEventListener('click', () => {
+        if (disabled) return;
+        state.sensorMode = m.value;
+        renderPerformance();
+      });
+      modeList.appendChild(chip);
+    });
+  }
+  const modeDesc = $('#modeDesc');
+  if (modeDesc) {
+    const cur = SENSOR_MODES.find((m) => m.value === state.sensorMode) || SENSOR_MODES[1];
+    const blocked = state.rate > 1000;
+    modeDesc.textContent = blocked ? t('mode8kNote') : t(cur.descKey);
+    modeDesc.className = 'opt-desc' + (blocked ? ' warn' : '');
+  }
 }
 
 // ── 灯效（接收器灯效）─────────────────────────────────────
@@ -935,11 +980,273 @@ function renderLighting() {
   }
 }
 
-// ── Profile ────────────────────────────────────────────────
-function renderProfile() {
-  document.querySelectorAll('.profile-btn').forEach((btn) => {
-    btn.classList.toggle('active', parseInt(btn.dataset.profile) === state.profile);
+// ── 板载配置（5 份 PC 端预设）──────────────────────────────
+// 实测（2026-11-15，G24 有线）：把 [6,9,idx] 依次写到 0..5 再回读，DPI / 键位 /
+// 回报率 / 节能时间完全一致，只有序号标记变化 —— 硬件只有 1 份配置。
+// 官方桌面驱动的 5 个「配置」(Language/ch.xml str_profile1..5) 都是 PC 端预设，
+// 切换时把整套配置灌进鼠标。本工具按同样语义实现。
+const DEFAULT_DPI_LEVELS = [
+  { x: 400, y: 400, color: '#ff4d4d' },
+  { x: 800, y: 800, color: '#4da3ff' },
+  { x: 1600, y: 1600, color: '#3fb950' },
+  { x: 2400, y: 2400, color: '#ffd700' },
+  { x: 3200, y: 3200, color: '#22d3ee' },
+  { x: 6400, y: 6400, color: '#ff4dff' },
+];
+
+const DEFAULT_BUTTONS = [
+  { type: 'mouse', value: 'LEFT' },
+  { type: 'mouse', value: 'RIGHT' },
+  { type: 'mouse', value: 'MIDDLE' },
+  { type: 'mouse', value: 'BACK' },
+  { type: 'mouse', value: 'FORWARD' },
+  { type: 'mouse', value: 'DPI_LOOP' },
+];
+
+function profileCount() {
+  return state.constants && state.constants.profileCount ? state.constants.profileCount : 5;
+}
+
+/** 一份未改动过的配置：默认 DPI 档位与颜色（用户没改过时界面就显示这些） */
+function defaultProfile() {
+  return {
+    dpiLevels: DEFAULT_DPI_LEVELS.map((lv) => ({ ...lv })),
+    currentDpi: 0,
+    xySplit: false,
+    rate: 1000,
+    lod: 0,
+    ripple: false,
+    angleSnap: false,
+    motionSync: true,
+    debounce: 8,
+    sensorMode: 2,
+    sleepTime: 60,
+    receiverLed: 0,
+    buttons: DEFAULT_BUTTONS.map((b) => ({ ...b })),
+  };
+}
+
+/** 把界面上的当前编辑状态存回当前配置槽 */
+function captureProfile() {
+  const p = state.profiles[state.profile];
+  if (!p) return;
+  p.dpiLevels = state.dpiLevels.map((lv) => ({ ...lv }));
+  p.currentDpi = state.currentDpi;
+  p.xySplit = state.xySplit;
+  p.rate = state.rate;
+  p.lod = state.lod;
+  p.ripple = state.ripple;
+  p.angleSnap = state.angleSnap;
+  p.motionSync = state.motionSync;
+  p.debounce = state.debounce;
+  p.sensorMode = state.sensorMode;
+  p.sleepTime = state.sleepTime;
+  p.receiverLed = state.receiverLed;
+  p.buttons = state.buttons.map((b) => ({ ...b }));
+}
+
+/** 把某份配置载入界面状态 */
+function loadProfileData(p) {
+  if (!p) return;
+  if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
+    state.dpiLevels = p.dpiLevels.map((lv) => ({ ...lv }));
+  }
+  state.currentDpi = clamp(p.currentDpi ?? 0, 0, Math.max(state.dpiLevels.length - 1, 0));
+  state.xySplit = !!p.xySplit;
+  if (p.rate) state.rate = p.rate;
+  if (p.lod != null) state.lod = clamp(p.lod, 0, 2);
+  state.ripple = !!p.ripple;
+  state.angleSnap = !!p.angleSnap;
+  state.motionSync = !!p.motionSync;
+  if (p.sensorMode != null) state.sensorMode = clamp(p.sensorMode, 1, 3);
+  if (p.debounce != null) state.debounce = clamp(p.debounce, 0, 30);
+  if (p.sleepTime != null) state.sleepTime = p.sleepTime;
+  if (p.receiverLed != null) state.receiverLed = clamp(p.receiverLed, 0, 2);
+  state.buttons = (p.buttons || DEFAULT_BUTTONS).map((b) => ({ ...b }));
+}
+
+/** 补齐 5 个配置槽（旧版本只有单份配置时迁移到第 1 槽） */
+function ensureProfiles() {
+  const n = profileCount();
+  if (!Array.isArray(state.profiles)) state.profiles = [];
+  while (state.profiles.length < n) state.profiles.push(defaultProfile());
+  if (state.profiles.length > n) state.profiles.length = n;
+  state.profile = clamp(state.profile || 0, 0, n - 1);
+}
+
+/**
+ * 切换配置：保存当前槽 → 载入目标槽 → （已连接时）把整套配置写入鼠标。
+ * 硬件只有一个配置位，所以「切换」必须真正下发，否则鼠标行为不会变。
+ */
+async function switchProfile(index, opts = {}) {
+  const n = profileCount();
+  const i = clamp(index, 0, n - 1);
+  if (state.switching) return;
+  if (i === state.profile && !opts.force) {
+    renderProfile();
+    return;
+  }
+  captureProfile();
+  state.profile = i;
+  loadProfileData(state.profiles[i]);
+  renderAll();
+  saveLocalConfig();
+
+  if (!state.connected) return;
+  state.switching = true;
+  lastWriteAt = Date.now();
+  renderProfile();
+  flashStatus(t('profileSwitching').replace('{n}', i + 1));
+  try {
+    await window.api.apply(buildApplyOps());
+    flashStatus(t('profileSwitched').replace('{n}', i + 1));
+  } catch (e) {
+    flashStatus(t('applyFailed') + errMsg(e), true);
+  } finally {
+    state.switching = false;
+    renderProfile();
+  }
+}
+
+// ── 键码反解（读设备配置时把 32 位键码还原成界面选项）─────────
+function hidNameFor(hidCode) {
+  if (!state.constants) return null;
+  for (const [name, code] of Object.entries(state.constants.hidKeyCodes)) {
+    if (code === hidCode) return name;
+  }
+  return null;
+}
+
+/**
+ * 32 位键码 → { type, value }。
+ * 反解不出来时返回 null，调用方保留默认值并记下 raw，应用时原样写回（避免抹掉用户的自定义键）。
+ */
+function decodeKeyCode(code32) {
+  const C = state.constants;
+  if (!C) return null;
+  const code = code32 >>> 0;
+  for (const [name, val] of Object.entries(C.mouseKeyCodes || {})) {
+    if ((val >>> 0) === code) return { type: 'mouse', value: name };
+  }
+  for (const [name, val] of Object.entries(C.mediaKeyCodes || {})) {
+    if ((val >>> 0) === code) return { type: 'media', value: name };
+  }
+  if ((code & 0xff) === 9) return { type: 'macro', value: String(code >>> 16) };
+  if ((code & 0xff) === 0x80) {
+    // 普通键盘键：(hidCode << 8) | 0x80
+    const name = hidNameFor((code >> 8) & 0xff);
+    if (name) return { type: 'keyboard', value: name };
+  }
+  if ((code & 0xff) === 0) {
+    // 带修饰键：(hidCode << 16) | (modifier << 8)，界面只显示主键
+    const name = hidNameFor((code >> 16) & 0xff);
+    if (name) return { type: 'keyboard', value: name };
+  }
+  return null;
+}
+
+/** 把设备读回的 6 个键码写到 state.buttons（反解不了的保留默认 + raw） */
+function applyButtonCodes(codes) {
+  if (!Array.isArray(codes) || !codes.length) return;
+  codes.forEach((code, i) => {
+    if (i >= state.buttons.length) return;
+    const decoded = decodeKeyCode(code);
+    state.buttons[i] = decoded
+      ? { ...decoded, raw: undefined }
+      : { ...DEFAULT_BUTTONS[i], raw: code >>> 0 };
   });
+}
+
+/**
+ * 把 readConfig 的快照写进当前使用的配置槽并载入界面。
+ * 颜色为 #000000 表示该档没存过颜色（固件默认），此时保留预设里的颜色。
+ */
+function applyDeviceSnapshot(snap) {
+  if (!snap) return;
+  const slot = clamp(typeof snap.profileIndex === 'number' ? snap.profileIndex : 0, 0, profileCount() - 1);
+  state.profile = slot;
+  const p = state.profiles[slot] || defaultProfile();
+
+  if (Array.isArray(snap.slots) && snap.slots.length) {
+    p.dpiLevels = snap.slots.map((s, i) => {
+      const base = p.dpiLevels[i] || DEFAULT_DPI_LEVELS[i] || DEFAULT_DPI_LEVELS[0];
+      return {
+        x: s.dpi,
+        y: s.dpi,
+        color: s.color && s.color !== '#000000' ? s.color : base.color,
+      };
+    });
+  }
+  if (snap.current != null) p.currentDpi = snap.current;
+  if (snap.rate) p.rate = snap.rate;
+  if (snap.lod != null) p.lod = snap.lod;
+  if (snap.ripple != null) p.ripple = snap.ripple;
+  if (snap.angleSnap != null) p.angleSnap = snap.angleSnap;
+  if (snap.motionSync != null) p.motionSync = snap.motionSync;
+  if (snap.sensorMode != null) p.sensorMode = clamp(snap.sensorMode, 1, 3);
+  if (snap.debounce != null) p.debounce = snap.debounce;
+  if (snap.sleepTime != null) p.sleepTime = snap.sleepTime;
+  if (snap.receiverLed != null) p.receiverLed = snap.receiverLed;
+
+  state.profiles[slot] = p;
+  loadProfileData(p);
+  applyButtonCodes(snap.buttons);
+}
+
+function renderProfile() {
+  const n = profileCount();
+  const bar = $('#profileBar');
+  if (bar) bar.title = t('profileNotOnHardware');
+  document.querySelectorAll('.profile-btn').forEach((btn) => {
+    const i = parseInt(btn.dataset.profile, 10);
+    btn.classList.toggle('active', i === state.profile);
+    btn.disabled = state.switching;
+    btn.title = t('profileName').replace('{n}', i + 1);
+    btn.setAttribute('aria-pressed', i === state.profile ? 'true' : 'false');
+    btn.hidden = i >= n;
+  });
+}
+
+// ── 节能调节（± 步进，官方档位）────────────────────────────
+function sleepSteps() {
+  return (state.constants && state.constants.sleepSteps) || [10, 20, 30, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900];
+}
+
+/** 任意秒数吸附到最近的官方档位（导入配置 / 读回设备时用） */
+function nearestSleepStep(sec) {
+  const steps = sleepSteps();
+  const n = Number(sec);
+  if (!Number.isFinite(n)) return steps[0];
+  return steps.reduce((a, b) => (Math.abs(b - n) < Math.abs(a - n) ? b : a));
+}
+
+function renderSleep() {
+  const steps = sleepSteps();
+  const i = steps.indexOf(state.sleepTime);
+  const el = $('#sleepValue');
+  if (el) el.textContent = String(state.sleepTime);
+  const down = $('#sleepDown');
+  const up = $('#sleepUp');
+  if (down) {
+    down.disabled = i <= 0;
+    down.title = t('sleepLess');
+    down.setAttribute('aria-label', t('sleepLess'));
+  }
+  if (up) {
+    up.disabled = i < 0 || i >= steps.length - 1;
+    up.title = t('sleepMore');
+    up.setAttribute('aria-label', t('sleepMore'));
+  }
+}
+
+function stepSleep(dir) {
+  const steps = sleepSteps();
+  let i = steps.indexOf(state.sleepTime);
+  if (i < 0) i = steps.reduce((a, b, idx) => (Math.abs(b - state.sleepTime) < Math.abs(steps[a] - state.sleepTime) ? idx : a), 0);
+  const next = clamp(i + dir, 0, steps.length - 1);
+  if (next === i) return;
+  state.sleepTime = steps[next];
+  renderSleep();
 }
 
 // ── 按键映射 ───────────────────────────────────────────────
@@ -982,6 +1289,7 @@ function renderButtons() {
     valueSel.appendChild(buildButtonOptions(btn.type, btn.value));
     valueSel.addEventListener('change', () => {
       state.buttons[i].value = valueSel.value;
+      state.buttons[i].raw = undefined; // 用户改过就不再原样写回
     });
 
     row.appendChild(name);
@@ -1231,6 +1539,7 @@ async function onApply() {
 
   try {
     const ops = buildApplyOps();
+    lastWriteAt = Date.now(); // 写入回显的配置序号要忽略（见 onProfile）
     await window.api.apply(ops);
     status.textContent = t('applied');
     status.title = status.textContent;
@@ -1256,6 +1565,11 @@ function buildApplyOps() {
 
   // 按键映射（按矩阵位置 index）
   state.buttons.forEach((btn, i) => {
+    // 读设备时反解不出来的键码原样写回，避免把用户自定义的键抹成默认值
+    if (btn.raw != null) {
+      ops.push({ action: 'setKeyRaw', args: [i, btn.raw] });
+      return;
+    }
     ops.push({ action: 'setKey', args: [i, btn.type, btn.value] });
   });
 
@@ -1276,6 +1590,9 @@ function buildApplyOps() {
 
   // 轮询率
   ops.push({ action: 'setRate', args: [state.rate] });
+
+  // 性能模式（协议 apply 顺序：回报率之后）
+  ops.push({ action: 'setSensorMode', args: [state.sensorMode] });
 
   // 传感器高级
   ops.push({ action: 'setRipple', args: [state.ripple] });
@@ -1307,11 +1624,11 @@ function dpiToHwSafe(dpi) {
 // ── 配置导入导出（.ict，兼容官方网页驱动格式）────────────────
 function buildProfileExport() {
   return {
-    name: 'Profile ' + (state.profile + 1),
+    name: t('profileName').replace('{n}', state.profile + 1),
     sensor: state.modelInfo ? state.modelInfo.sensor : undefined,
     rate: state.rate,
     lod: state.lod,
-    sensorMode: 1,
+    sensorMode: state.sensorMode,
     angleSnap: state.angleSnap,
     ripple: state.ripple,
     motionSync: state.motionSync,
@@ -1339,7 +1656,7 @@ async function onImportProfile() {
     if (res.canceled) return;
     applyImportedProfile(res.profile);
     renderAll();
-    saveLocalConfig();
+    saveLocalConfig(); // 导入的配置写入当前槽并持久化
     flashStatus(t('configImported'));
   } catch (e) {
     flashStatus(t('importFailed') + e.message, true);
@@ -1358,13 +1675,11 @@ function applyImportedProfile(p) {
   state.angleSnap = !!p.angleSnap;
   state.ripple = !!p.ripple;
   state.motionSync = !!p.motionSync;
+  if (p.sensorMode != null) state.sensorMode = clamp(p.sensorMode, 1, 3);
+  if (p.sensorMode != null) state.sensorMode = clamp(p.sensorMode, 1, 3);
   if (p.debounce != null) state.debounce = clamp(p.debounce, 0, 30);
-  if (p.sleepTime != null) {
-    // 休眠时间下拉只有固定档位，吸附到最近可选值
-    const opts = [10, 30, 60, 300, 600, 1800];
-    state.sleepTime = opts.reduce((a, b) =>
-      Math.abs(b - p.sleepTime) < Math.abs(a - p.sleepTime) ? b : a);
-  }
+  // 节能调节只有固定档位，吸附到最近的官方值
+  if (p.sleepTime != null) state.sleepTime = nearestSleepStep(p.sleepTime);
   if (Array.isArray(p.buttons) && p.buttons.length === 6) state.buttons = p.buttons;
   if (p.receiverLed != null) state.receiverLed = clamp(p.receiverLed, 0, 2);
   // 非 8K 接收器回落超范围回报率
@@ -1421,49 +1736,53 @@ function flashStatus(text, isErr) {
 }
 
 // ── 本地配置持久化 ─────────────────────────────────────────
+/** 旧格式（单份配置）→ 一份完整预设，缺的字段用默认值补齐 */
+function normalizeProfile(p) {
+  const base = defaultProfile();
+  if (!p || typeof p !== 'object') return base;
+  const out = { ...base };
+  if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
+    out.dpiLevels = p.dpiLevels.map((lv) => ({
+      x: Number(lv.x) || base.dpiLevels[0].x,
+      y: Number(lv.y) || Number(lv.x) || base.dpiLevels[0].y,
+      color: typeof lv.color === 'string' ? lv.color : base.dpiLevels[0].color,
+    }));
+  }
+  if (p.currentDpi != null) out.currentDpi = clamp(p.currentDpi, 0, out.dpiLevels.length - 1);
+  ['xySplit', 'ripple', 'angleSnap', 'motionSync'].forEach((k) => {
+    if (p[k] != null) out[k] = !!p[k];
+  });
+  if (p.rate) out.rate = p.rate;
+  if (p.lod != null) out.lod = clamp(p.lod, 0, 2);
+  if (p.debounce != null) out.debounce = clamp(p.debounce, 0, 30);
+  if (p.sensorMode != null) out.sensorMode = clamp(p.sensorMode, 1, 3);
+  if (p.sleepTime != null) out.sleepTime = p.sleepTime;
+  if (p.receiverLed != null) out.receiverLed = clamp(p.receiverLed, 0, 2);
+  if (Array.isArray(p.buttons) && p.buttons.length === 6) out.buttons = p.buttons.map((b) => ({ ...b }));
+  return out;
+}
+
 function loadLocalConfig() {
+  let saved = null;
   try {
-    const saved = JSON.parse(localStorage.getItem('incott-config'));
-    if (saved) {
-      if (Array.isArray(saved.dpiLevels) && saved.dpiLevels.length) state.dpiLevels = saved.dpiLevels;
-      if (saved.currentDpi != null) state.currentDpi = saved.currentDpi;
-      if (saved.xySplit != null) state.xySplit = saved.xySplit;
-      if (saved.rate != null) state.rate = saved.rate;
-      if (saved.lod != null) state.lod = saved.lod;
-      if (saved.ripple != null) state.ripple = saved.ripple;
-      if (saved.angleSnap != null) state.angleSnap = saved.angleSnap;
-      if (saved.motionSync != null) state.motionSync = saved.motionSync;
-      if (saved.debounce != null) state.debounce = saved.debounce;
-      if (saved.sleepTime != null) state.sleepTime = saved.sleepTime;
-      if (saved.receiverLed != null) state.receiverLed = saved.receiverLed;
-      if (saved.profile != null) state.profile = saved.profile;
-      if (Array.isArray(saved.buttons)) state.buttons = saved.buttons;
-      if (Array.isArray(saved.macros)) state.macros = saved.macros;
-      if (saved.currentMacro != null) state.currentMacro = saved.currentMacro;
-    }
+    saved = JSON.parse(localStorage.getItem('incott-config'));
   } catch (_) { /* 忽略 */ }
 
-  if (state.dpiLevels.length === 0) {
-    state.dpiLevels = [
-      { x: 400, y: 400, color: '#ff4d4d' },
-      { x: 800, y: 800, color: '#4da3ff' },
-      { x: 1600, y: 1600, color: '#3fb950' },
-      { x: 2400, y: 2400, color: '#ffd700' },
-      { x: 3200, y: 3200, color: '#22d3ee' },
-      { x: 6400, y: 6400, color: '#ff4dff' },
-    ];
+  if (saved) {
+    if (Array.isArray(saved.profiles) && saved.profiles.length) {
+      state.profiles = saved.profiles.map(normalizeProfile);
+      if (saved.profile != null) state.profile = saved.profile;
+    } else {
+      // 0.4 及更早只存了一份配置 —— 迁移到第 1 槽，其余槽位保持官方默认
+      state.profiles = [normalizeProfile(saved)];
+    }
+    if (Array.isArray(saved.macros)) state.macros = saved.macros;
+    if (saved.currentMacro != null) state.currentMacro = saved.currentMacro;
   }
 
-  if (state.buttons.length === 0) {
-    state.buttons = [
-      { type: 'mouse', value: 'LEFT' },
-      { type: 'mouse', value: 'RIGHT' },
-      { type: 'mouse', value: 'MIDDLE' },
-      { type: 'mouse', value: 'BACK' },
-      { type: 'mouse', value: 'FORWARD' },
-      { type: 'mouse', value: 'DPI_LOOP' },
-    ];
-  }
+  ensureProfiles();
+  loadProfileData(state.profiles[state.profile]);
+  state.buttons = state.buttons.length ? state.buttons : DEFAULT_BUTTONS.map((b) => ({ ...b }));
 
   if (state.macros.length === 0) {
     state.macros = [];
@@ -1474,20 +1793,10 @@ function loadLocalConfig() {
 }
 
 function saveLocalConfig() {
+  captureProfile(); // 界面上的改动先落回当前槽，否则切配置/刷新会丢
   localStorage.setItem('incott-config', JSON.stringify({
-    dpiLevels: state.dpiLevels,
-    currentDpi: state.currentDpi,
-    xySplit: state.xySplit,
-    rate: state.rate,
-    lod: state.lod,
-    ripple: state.ripple,
-    angleSnap: state.angleSnap,
-    motionSync: state.motionSync,
-    debounce: state.debounce,
-    sleepTime: state.sleepTime,
+    profiles: state.profiles,
     profile: state.profile,
-    receiverLed: state.receiverLed,
-    buttons: state.buttons,
     macros: state.macros,
     currentMacro: state.currentMacro,
   }));
@@ -1502,13 +1811,13 @@ function renderAll() {
   renderButtons();
   initMacroKeySelect();
   renderMacro();
+  renderSleep();
   // 恢复开关状态
   $('#xySplit').checked = state.xySplit;
   $('#ripple').checked = state.ripple;
   $('#angleSnap').checked = state.angleSnap;
   $('#motionSync').checked = state.motionSync;
   $('#debounce').value = state.debounce;
-  $('#sleepTime').value = state.sleepTime;
 }
 
 function clamp(v, min, max) {

@@ -30,6 +30,12 @@ contextBridge.exposeInMainWorld('api', {
   /** 读取：read(readType, ...args) */
   read: (readType, ...args) => ipcRenderer.invoke('mouse:read', readType, ...args),
 
+  /** 一次性读出整套配置（连接/切换配置时对齐 UI） */
+  readConfig: () => ipcRenderer.invoke('mouse:readConfig'),
+
+  /** 订阅鼠标上的配置切换键（硬件只改序号，配置由本工具灌入） */
+  onProfile: (cb) => ipcRenderer.on('profile:update', (_e, idx) => cb(idx)),
+
   /** 订阅设备主动上报的电量（{level, charging}） */
   onBattery: (cb) => ipcRenderer.on('battery:update', (_e, v) => cb(v)),
 
@@ -41,6 +47,20 @@ contextBridge.exposeInMainWorld('api', {
 
   /** 批量应用（按序 + 间隔）：apply([{action, args, delay}]) */
   apply: (ops) => ipcRenderer.invoke('mouse:apply', ops),
+
+  // ── 托盘信息浮层 ──────────────────────────────────────────
+  /** 浮层要显示的当前状态（连接/电量/DPI 档位/回报率/配置） */
+  getTrayStatus: () => ipcRenderer.invoke('tray:status'),
+  /** 触发一次实时读取后返回最新状态 */
+  refreshTrayStatus: () => ipcRenderer.invoke('tray:refresh'),
+  /** 订阅浮层状态推送 */
+  onTrayStatus: (cb) => ipcRenderer.on('tray:status', (_e, v) => cb(v)),
+  /** 浮层每次弹出（用于播放淡入动画） */
+  onPopoverShown: (cb) => ipcRenderer.on('popover:shown', () => cb()),
+  /** 收起浮层（Esc） */
+  hideTrayPopover: () => ipcRenderer.invoke('tray:hidePopover'),
+  /** 收起浮层并打开主窗口 */
+  openMainFromTray: () => ipcRenderer.invoke('tray:openMain'),
 
   /** 上传宏到鼠标（编码 320 字节 + 分块上传） */
   uploadMacro: (macro) => ipcRenderer.invoke('mouse:uploadMacro', macro),

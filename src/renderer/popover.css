@@ -1,0 +1,97 @@
+/**
+ * 托盘信息弹窗样式（popover.html）。
+ * 复用 style.css 的主题变量，只定义浮层自己的排布——窗口 268×180（见 main/tray-popover.js）。
+ */
+
+html, body { width: 100%; height: 100%; }
+
+body.popover {
+  padding: 13px 15px 0;
+  gap: 0;
+  border-radius: 12px;
+  /* 比主界面略亮的顶部，让浮层从任务栏背景里"浮"出来 */
+  background: linear-gradient(180deg, #17122A 0%, var(--bg) 78%);
+  box-shadow: inset 0 0 0 1px var(--border-strong), 0 14px 34px rgba(0, 0, 0, .62);
+  overflow: hidden;
+  cursor: default;
+}
+
+@keyframes pv-in {
+  from { opacity: 0; transform: translateY(5px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+body.popover.pv-in { animation: pv-in 160ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  body.popover.pv-in { animation: none; }
+}
+
+/* ── 头部：状态点 + 型号 + 档位 ── */
+.pv-head { display: flex; align-items: center; gap: 7px; }
+.pv-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-muted); flex: none;
+  transition: background var(--t-base) ease, box-shadow var(--t-base) ease;
+}
+.pv-dot.on { background: var(--success); box-shadow: 0 0 8px rgba(53, 201, 138, .6); }
+.pv-name {
+  font-size: 12px; font-weight: 600; letter-spacing: .04em;
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pv-state {
+  margin-left: auto; font-size: 10.5px; color: var(--text-muted);
+  white-space: nowrap; flex: none;
+}
+
+/* ── 电量 ── */
+.pv-batt { display: flex; align-items: baseline; gap: 3px; margin-top: 8px; }
+.pv-num {
+  font-size: 27px; font-weight: 600; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--text);
+}
+.pv-unit { font-size: 11px; color: var(--text-dim); }
+.pv-charge {
+  margin-left: auto; font-size: 10.5px; font-weight: 600;
+  color: var(--success); align-self: center;
+}
+.pv-charge.hidden { display: none; }
+
+.pv-track {
+  height: 5px; margin-top: 8px; border-radius: 3px;
+  background: var(--track); overflow: hidden;
+}
+.pv-fill {
+  display: block; height: 100%; width: 0; border-radius: 3px;
+  background: var(--success);
+  transition: width var(--t-pop) ease, background var(--t-base) ease;
+}
+.pv-fill.mid { background: var(--warning); }
+.pv-fill.low { background: var(--danger); }
+.pv-fill.off { background: var(--border-strong); }
+
+/* ── 三列：DPI / 回报率 / 配置 ── */
+.pv-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle);
+}
+.pv-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pv-k {
+  font-size: 10px; letter-spacing: .04em; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pv-v {
+  font-size: 13.5px; font-weight: 600; color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pv-v small { font-size: 10px; font-weight: 500; color: var(--text-dim); margin-left: 2px; }
+.pv-v.dim { color: var(--text-muted); }
+
+/* ── 底部入口 ── */
+.pv-foot {
+  margin-top: auto; padding: 7px 0 10px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 10.5px; color: var(--text-muted); text-align: center;
+  cursor: pointer; user-select: none;
+  transition: color var(--t-fast) ease;
+}
+.pv-foot:hover, .pv-foot:focus-visible { color: var(--accent); outline: none; }

@@ -16,6 +16,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog, shell } = require('electron');
 const hid = require('./hid');
+const { createTrayPopover } = require('./tray-popover');
 const P = require('../shared/protocol');
 const fmt = require('../shared/config-format');
 const i18n = require('../shared/i18n');
@@ -24,9 +25,12 @@ let device = null; // 当前打开的 MouseDevice
 let deviceInfo = null; // 0x8F 型号信息（parseModelInfo 结果），连接时读取
 let mainWindow = null;
 let tray = null; // 托盘图标
+let trayPopover = null; // 托盘单击弹出的信息浮层
+let trayClickTimer = null; // 区分托盘单击/双击的延时句柄
 let batteryLevel = null; // 最近一次读到的电量（托盘显示）
 let batteryCharging = false; // 充电中标志（0x89 buf[1] bit7 / 推送 b0 bit7）
 let lastPushDpi = null; // 上一次推送的 DPI 索引（用于检测鼠标 DPI 键切换）
+let lastPushProfile = null; // 上一次推送的配置序号（用于检测鼠标上的配置切换键）
 let quitting = false; // 是否真正退出（关窗仅隐藏到托盘）
 let batteryTimer = null; // 电量轮询定时器
 let writing = false; // 写操作进行中（轮询读电量时跳过，避免打断 apply/宏上传序列）
@@ -129,6 +133,8 @@ const EXEC_ACTIONS = {
     }
     return P.buildSetKey(index, code);
   },
+  // 原样写回 32 位键码（读设备时反解不出来的自定义键）
+  setKeyRaw: (index, code32) => P.buildSetKey(index, code32 >>> 0),
   setProfile: (index) => P.buildSetProfile(index),
   setReceiverLed: (mode) => P.buildSetReceiverLed(mode),
 };
@@ -174,6 +180,11 @@ const READ_ACTIONS = {
   receiverLed: {
     build: () => P.buildReadReceiverLed(),
     parse: (buf) => buf[1],
+  },
+  // 0x86,9：当前配置序号在 buf[2]（实机验证：写 [6,9,n] 后回读即 n）
+  profileIndex: {
+    build: () => P.buildReadKey(9),
+    parse: (buf) => buf[2],
   },
   modelInfo: {
     build: () => P.buildReadModelInfo(),
@@ -243,8 +254,89 @@ async function readDeviceInfo() {
   }
 }
 
-function deviceState() {
-  return device
+/**
+ * 一次读出鼠标当前这整套配置（连接时对齐 UI 用）。
+ *
+ * 背景：5 个「板载配置」由 PC 端保存——实机验证（2026-11-15 G24）把 [6,9,idx]
+ * 依次写到 0..5，DPI/键位/回报率/休眠回读完全一致，只有序号标记变化，
+ * 说明硬件只有 1 份配置。因此「读配置」读的就是当前生效的这一份。
+ *
+ * 单项读失败只把该字段置 null（部分固件不回某些子项），不影响整体。
+ */
+async function readConfigSnapshot(dev) {
+  const read = async (bytes, wait = 45) => {
+    dev.sendFeatureReport(bytes);
+    await sleep(wait);
+    return Buffer.from(dev.getFeatureReport(P.REPORT_DATA_LEN));
+  };
+  const opt = async (bytes, fn, wait) => {
+    try {
+      const buf = await read(bytes, wait);
+      return buf[0] === bytes[0] ? fn(buf) : null;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const sensor = deviceInfo ? deviceInfo.sensor : null;
+  const snap = {
+    profileIndex: null,
+    levels: null,
+    current: null,
+    slots: [], // [{ dpi, color }]
+    rate: null,
+    lod: null, // UI 索引（已按传感器反查）
+    ripple: null,
+    angleSnap: null,
+    motionSync: null,
+    sensorMode: null,
+    debounce: null,
+    sleepTime: null,
+    buttons: [], // 每个按键的 32 位键码
+    receiverLed: null,
+  };
+
+  snap.profileIndex = await opt(P.buildReadKey(9), (b) => b[2]);
+
+  const dpiLevel = await opt(P.buildReadDpiLevel(), (b) => ({ levels: b[1], current: b[2] }));
+  if (dpiLevel) {
+    snap.levels = Math.min(Math.max(dpiLevel.levels, 1), 6);
+    snap.current = Math.min(Math.max(dpiLevel.current, 0), snap.levels - 1);
+  }
+  // 档位数读不到时按 6 档探一遍（0x82 对任意 slot 都会回值）
+  for (let i = 0; i < (snap.levels || 6); i++) {
+    const slot = await opt(P.buildReadResolution(i), (b) => ({
+      dpi: P.hwToDpi(b[2] | (b[3] << 8)),
+      color: P.bytesToColor(b),
+    }));
+    if (slot) snap.slots.push(slot);
+  }
+
+  snap.rate = await opt(P.buildReadRate(), (b) => {
+    const entry = P.RATE_TABLE.find((r) => r.code === b[1]);
+    return entry ? entry.hz : null;
+  });
+  const lodHw = await opt(P.buildReadSensor(1), (b) => b[2]);
+  snap.lod = lodHw == null ? null : P.lodFromHw(lodHw, sensor);
+  snap.ripple = await opt(P.buildReadSensor(2), (b) => b[2] === 1);
+  snap.angleSnap = await opt(P.buildReadSensor(3), (b) => b[2] === 1);
+  snap.motionSync = await opt(P.buildReadSensor(4), (b) => b[2] === 1);
+  snap.sensorMode = await opt(P.buildReadSensor(5), (b) => b[2]);
+  snap.debounce = await opt(P.buildReadMisc(1), (b) => b[2]);
+  snap.sleepTime = await opt(P.buildReadMisc(3), (b) => P.nearestSleepStep(b[2] | (b[3] << 8)));
+
+  for (let i = 0; i < 6; i++) {
+    const code = await opt(P.buildReadKey(i), (b) => ((b[5] << 24) | (b[4] << 16) | (b[3] << 8) | b[2]) >>> 0);
+    if (code != null) snap.buttons.push(code);
+  }
+
+  if (deviceInfo && deviceInfo.is8KReceiver) {
+    snap.receiverLed = await opt(P.buildReadReceiverLed(), (b) => b[1]);
+  }
+  return snap;
+}
+
+function deviceState() {  return device
     ? {
         opened: true,
         productId: device.productId,
@@ -260,8 +352,13 @@ function getConstants() {
     rateTable: P.RATE_TABLE,
     lodTable: P.LOD_TABLE,
     ledModeTable: P.LED_MODE_TABLE,
+    sleepSteps: P.SLEEP_STEPS,
+    profileCount: P.PROFILE_COUNT,
     mouseKeys: Object.keys(P.MOUSE_KEYS),
     mediaKeys: Object.keys(P.MEDIA_KEYS),
+    // 反向查表用（读设备时把 32 位键码还原成界面选项）
+    mouseKeyCodes: P.MOUSE_KEYS,
+    mediaKeyCodes: P.MEDIA_KEYS,
     modifiers: P.MODIFIERS,
     hidKeyCodes: P.HID_KEY_CODES,
     keyMatrix: P.KEY_MATRIX,
@@ -300,7 +397,9 @@ function handleDeviceGone(err, sourceDevice) {
   }
   deviceInfo = null;
   lastPushDpi = null;
+  lastPushProfile = null;
   hid.invalidateCache(); // 重新插上后接口路径可能变化
+  resetQuickStatus();
   updateTrayBattery(null);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('device:disconnected');
@@ -308,20 +407,39 @@ function handleDeviceGone(err, sourceDevice) {
 }
 
 /**
+ * HID 通道串行队列。
+ *
+ * Feature Report 是「发命令 → 等 → 读回」的三段序列，且读写共用同一条通道：
+ * 两路操作并发时，后发的命令会顶掉前一条的响应，各自读到对方的回包（连接时
+ * readConfig 与电量轮询/浮层读撞在一起就会读到别的档位的值）。因此所有设备操作
+ * 都进这条队列，保证任意时刻只有一个序列在跑。
+ */
+let ioQueue = Promise.resolve();
+function withIo(fn) {
+  const run = ioQueue.then(fn, fn); // 前一次失败也要继续，否则队列会永久卡死
+  ioQueue = run.then(() => {}, () => {});
+  return run;
+}
+
+/**
  * 统一的设备操作包装：未连接报错；底层报设备不存在时转为断连处理 + 友好提示。
+ * 走串行队列，避免与电量轮询/浮层读取/其它写操作交错。
  */
 async function withDevice(fn) {
   if (!device) throw new Error('设备未连接，请先连接鼠标');
-  const dev = device;
-  try {
-    return await fn(dev);
-  } catch (e) {
-    if (isDeviceGoneError(e)) {
-      handleDeviceGone(e, dev);
-      throw new Error('鼠标已断开（被拔出或接收器掉线），请重新连接');
+  return withIo(async () => {
+    const dev = device;
+    if (!dev) throw new Error('设备未连接，请先连接鼠标');
+    try {
+      return await fn(dev);
+    } catch (e) {
+      if (isDeviceGoneError(e)) {
+        handleDeviceGone(e, dev);
+        throw new Error('鼠标已断开（被拔出或接收器掉线），请重新连接');
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // ── IPC 注册 ────────────────────────────────────────────────
@@ -329,13 +447,19 @@ function registerIpc() {
   ipcMain.handle('mouse:list', () => hid.listDevicesAsync());
 
   ipcMain.handle('mouse:open', async (_e, pathArg) => {
-    if (device) device.close();
-    device = await hid.openDevice(pathArg); // 失败会自动重新枚举重试一次（设备切换模式后路径会变）
-    const opened = device;
-    device.onError((e) => handleDeviceGone(e, opened)); // 拔出/接收器掉线：仅当前设备才处理
-    deviceInfo = await readDeviceInfo(); // 连接即识别型号/传感器/8K 接收器（失败为 null）
+    // 打开也进队列：设备切换期间不能让轮询/浮层读插进来（会读到旧句柄或顶掉响应）
+    const opened = await withIo(async () => {
+      if (device) device.close();
+      const dev = await hid.openDevice(pathArg); // 失败会自动重新枚举重试一次（设备切换模式后路径会变）
+      device = dev;
+      return dev;
+    });
+    opened.onError((e) => handleDeviceGone(e, opened)); // 拔出/接收器掉线：仅当前设备才处理
+    deviceInfo = await withIo(() => readDeviceInfo()); // 连接即识别型号/传感器/8K 接收器（失败为 null）
+    lastPushDpi = null; // 新连接重新建立推送基线（避免拿上次会话的索引做比较）
+    lastPushProfile = null;
     // 监听设备主动上报（官方电量的主通道）：电量/充电/回报率/DPI 变化时推送
-    device.onData((buf) => {
+    opened.onData((buf) => {
       const s = P.parseStatusPush(buf);
       if (!s) return;
       if (s.power !== batteryLevel || s.charging !== batteryCharging) {
@@ -344,25 +468,44 @@ function registerIpc() {
       if (mainWindow) {
         mainWindow.webContents.send('battery:update', { level: s.power, charging: s.charging });
       }
+      // 浮层的 DPI/回报率/配置跟着推送走；换了档位要补读该档的 DPI 数值
+      if (s.dpiIndex !== quick.dpiIndex) {
+        quick.dpiIndex = s.dpiIndex;
+        refreshQuickStatus();
+      }
+      if (s.rate != null) quick.rate = s.rate;
+      quick.profile = s.profileIndex;
+      broadcastTrayStatus();
       // DPI 键切换档位时弹提示（档位 + 回报率 + 电量）
       if (lastPushDpi != null && s.dpiIndex !== lastPushDpi) {
         notifyDpiSwitch(s);
       }
       lastPushDpi = s.dpiIndex;
+      // 鼠标上的配置切换键：硬件只改序号标记，真正的配置由渲染层把预设灌进去
+      if (s.profileIndex !== lastPushProfile) {
+        const changed = lastPushProfile != null;
+        lastPushProfile = s.profileIndex;
+        if (changed && mainWindow) {
+          mainWindow.webContents.send('profile:update', s.profileIndex);
+        }
+      }
     });
     pollBattery(); // 连接后立即读一次电量更新托盘（不等 60s 轮询）
+    refreshQuickStatus(); // 浮层用的 DPI/回报率/配置（后台补读，不阻塞连接返回）
     return deviceState();
   });
 
-  ipcMain.handle('mouse:close', () => {
-    if (device) device.close();
+  ipcMain.handle('mouse:close', () => withIo(async () => {
+    if (device) device.close(); // 排队执行：别在别的读序列跑到一半时关句柄
     device = null;
     deviceInfo = null;
     lastPushDpi = null;
+    lastPushProfile = null;
     hid.invalidateCache(); // 断开后设备可能已换模式，下次连接必须重新枚举
+    resetQuickStatus();
     updateTrayBattery(null); // 托盘电量归零为「未连接」
     return deviceState();
-  });
+  }));
 
   ipcMain.handle('mouse:state', () => deviceState());
   ipcMain.handle('mouse:constants', () => getConstants());
@@ -403,6 +546,17 @@ function registerIpc() {
       return def.parse(buf, ...args);
     });
   });
+
+  // 一次性读出整套配置（连接/切换配置时对齐 UI，比逐条 IPC 快得多）
+  ipcMain.handle('mouse:readConfig', () => withDevice(async (dev) => {
+    const snap = await readConfigSnapshot(dev);
+    // 顺带把配置序号同步给托盘浮层（省掉单独读 0x86,9 的那条命令）
+    if (snap && snap.profileIndex != null) {
+      quick.profile = snap.profileIndex;
+      broadcastTrayStatus();
+    }
+    return snap;
+  }));
 
   // 批量应用：按协议 apply 流程顺序执行一组操作（带间隔）
   ipcMain.handle('mouse:apply', async (_e, ops) => {
@@ -453,6 +607,23 @@ function registerIpc() {
     buildMenu();
     if (tray) tray.setContextMenu(buildTrayMenu());
     return i18n.getLang();
+  });
+
+  // ── 托盘信息浮层 ────────────────────────────────────────
+  // 面板打开时先拿缓存立即渲染，再触发一次实时读取（慢约 200ms，回来覆盖）
+  ipcMain.handle('tray:status', () => trayStatus());
+  ipcMain.handle('tray:refresh', async () => {
+    await refreshQuickStatus();
+    return trayStatus();
+  });
+  ipcMain.handle('tray:hidePopover', () => {
+    if (trayPopover) trayPopover.hide();
+    return true;
+  });
+  ipcMain.handle('tray:openMain', () => {
+    if (trayPopover) trayPopover.hide();
+    showMainWindow();
+    return true;
   });
 
   // 设置（开机自启 / 启动后台保留）
@@ -584,9 +755,92 @@ function buildMenu() {
 /** 广播语言切换给渲染进程 */
 function broadcastLang(lang) {
   if (mainWindow) mainWindow.webContents.send('i18n:changed', lang);
+  if (trayPopover) trayPopover.broadcast('i18n:changed', lang); // 浮层文案跟着切
 }
 
 // ── 托盘与后台轮询 ─────────────────────────────────────────
+// 托盘单击要等这么久才弹出，用来区分「单击 → 浮层」和「双击 → 主窗口」
+const TRAY_CLICK_DELAY = 200;
+
+// 托盘浮层的轻量状态缓存：面板要显示 DPI 数值/回报率/配置序号，
+// 这些不在电量推送里全量携带，所以连接时读一次、档位或配置变化时补读，
+// 弹面板时先用缓存渲染再后台刷新，避免每次单击都等 HID 往返。
+const quick = { dpi: null, dpiIndex: null, levels: null, rate: null, profile: null };
+let refreshingQuick = false; // 防止推送密集时并发的补读（会互相打断 feature report）
+
+function resetQuickStatus() {
+  quick.dpi = null;
+  quick.dpiIndex = null;
+  quick.levels = null;
+  quick.rate = null;
+  quick.profile = null;
+}
+
+function trayStatus() {
+  return {
+    connected: !!device,
+    name: deviceInfo
+      ? [deviceInfo.model, deviceInfo.is8KReceiver ? '8K' : ''].filter(Boolean).join(' ')
+      : null,
+    wireless: device ? !!device.isWireless : false,
+    battery: batteryLevel,
+    charging: batteryCharging,
+    dpi: quick.dpi,
+    dpiIndex: quick.dpiIndex,
+    levels: quick.levels,
+    rate: quick.rate,
+    profile: quick.profile,
+    profileCount: P.PROFILE_COUNT,
+  };
+}
+
+/** 浮层可见时把状态推给它（不可见时什么都不做，省一次 IPC） */
+function broadcastTrayStatus() {
+  if (trayPopover && trayPopover.isVisible()) trayPopover.sendStatus();
+}
+
+/**
+ * 读一次 DPI 档位、当前档 DPI、回报率（3 条命令，约 150ms）。
+ * 单项读失败保持旧值——面板显示缓存好过显示空白。
+ *
+ * 注意：这里刻意不读 0x86,9（配置序号）——配置序号由设备推送和连接时的
+ * readConfig 快照提供。多一条读命令就多一次与主界面读序列撞车的风险。
+ */
+async function refreshQuickStatus() {
+  if (!device || writing || refreshingQuick) return;
+  refreshingQuick = true;
+  let dev = null;
+  try {
+    await withIo(async () => {
+      dev = device;
+      if (!dev) return;
+      const read = async (bytes) => {
+        dev.sendFeatureReport(bytes);
+        await sleep(45);
+        return Buffer.from(dev.getFeatureReport(P.REPORT_DATA_LEN));
+      };
+      const lv = await read(P.buildReadDpiLevel());
+      if (lv[0] === 0x83) {
+        quick.levels = Math.min(Math.max(lv[1], 1), 6);
+        quick.dpiIndex = Math.min(Math.max(lv[2], 0), quick.levels - 1);
+      }
+      const res = await read(P.buildReadResolution(quick.dpiIndex == null ? 0 : quick.dpiIndex));
+      if (res[0] === 0x02) quick.dpi = P.hwToDpi(res[2] | (res[3] << 8));
+      const rate = await read(P.buildReadRate());
+      if (rate[0] === 0x01) {
+        const entry = P.RATE_TABLE.find((r) => r.code === rate[1]);
+        if (entry) quick.rate = entry.hz;
+      }
+    });
+  } catch (e) {
+    if (isDeviceGoneError(e)) handleDeviceGone(e, dev);
+    return;
+  } finally {
+    refreshingQuick = false;
+  }
+  broadcastTrayStatus();
+}
+
 // 电量三段配色（对齐官方与界面规则：>60 绿，25~60 黄，≤25 红）
 const TRAY_COLORS = {
   default: [0x4d, 0xa3, 0xff], // 蓝（未连接/未知）
@@ -619,6 +873,7 @@ function createTrayIcon(color = TRAY_COLORS.default) {
 }
 
 function showMainWindow() {
+  if (trayPopover) trayPopover.hide(); // 打开主窗口时收起浮层
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();
@@ -651,12 +906,13 @@ function updateTrayBattery(battery, charging) {
     : i18n.t('notConnected');
   tray.setToolTip(`Incott Mouse Driver — ${i18n.t('batteryLabel')} ${batteryText}`);
   tray.setContextMenu(buildTrayMenu());
+  broadcastTrayStatus();
 }
 
 async function pollBattery() {
   if (!device || writing) return; // 未连接或正在写，跳过本次
   try {
-    const val = await readBatteryValue();
+    const val = await withIo(() => readBatteryValue()); // 走串行队列，别和界面读撞车
     if (val != null) updateTrayBattery(val.level, val.charging);
   } catch (e) {
     // 设备拔出/接收器掉线 → 更新为未连接，不弹异常；休眠则忽略本次，下次重试
@@ -820,9 +1076,35 @@ app.whenReady().then(async () => {
   tray = new Tray(createTrayIcon());
   tray.setToolTip('Incott Mouse Driver');
   tray.setContextMenu(buildTrayMenu());
-  // 单击/双击托盘图标直接显示主窗口（仅靠右键菜单不直观）
-  tray.on('click', () => showMainWindow());
-  tray.on('double-click', () => showMainWindow());
+  trayPopover = createTrayPopover({ getStatus: trayStatus });
+  // 稍后预热浮层窗口（只创建不显示），首次单击不用等页面加载
+  setTimeout(() => {
+    if (trayPopover) trayPopover.warmup();
+  }, 1500);
+  // 单击：弹出信息浮层（再单击收起）；双击：打开主窗口。
+  // Windows 上双击会先送来 click 事件，所以单击要压一个延时等第二次点击，
+  // 收到 double-click 时立即取消，避免「双击时先闪一下浮层」。
+  tray.on('click', () => {
+    if (trayClickTimer) {
+      clearTimeout(trayClickTimer);
+      trayClickTimer = null;
+      return;
+    }
+    trayClickTimer = setTimeout(() => {
+      trayClickTimer = null;
+      if (!trayPopover) return;
+      trayPopover.toggle(tray);
+      // 弹出后补一次实时读取：缓存可能是在官方驱动/鼠标按键改过之后留下的
+      if (trayPopover.isVisible()) refreshQuickStatus();
+    }, TRAY_CLICK_DELAY);
+  });
+  tray.on('double-click', () => {
+    if (trayClickTimer) {
+      clearTimeout(trayClickTimer);
+      trayClickTimer = null;
+    }
+    showMainWindow();
+  });
   startBatteryPolling();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -835,6 +1117,10 @@ app.on('before-quit', () => {
   device = null;
   if (batteryTimer) clearInterval(batteryTimer);
   batteryTimer = null;
+  if (trayClickTimer) clearTimeout(trayClickTimer);
+  trayClickTimer = null;
+  if (trayPopover) trayPopover.destroy();
+  trayPopover = null;
 });
 
 app.on('window-all-closed', () => {

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>Incott</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="popover.css" />
+</head>
+<body class="popover">
+  <div class="pv-head">
+    <span class="pv-dot" id="pvDot"></span>
+    <span class="pv-name" id="pvName">Incott</span>
+    <span class="pv-state" id="pvState"></span>
+  </div>
+
+  <div class="pv-batt">
+    <span class="pv-num" id="pvBattery">--</span>
+    <span class="pv-unit">%</span>
+    <span class="pv-charge hidden" id="pvCharging" data-i18n="chargingTag">充电中</span>
+  </div>
+  <div class="pv-track"><span class="pv-fill" id="pvFill"></span></div>
+
+  <div class="pv-grid">
+    <div class="pv-cell">
+      <span class="pv-k" data-i18n="trayDpiLabel">DPI</span>
+      <span class="pv-v" id="pvDpi">--</span>
+    </div>
+    <div class="pv-cell">
+      <span class="pv-k" data-i18n="trayRateLabel">回报率</span>
+      <span class="pv-v" id="pvRate">--</span>
+    </div>
+    <div class="pv-cell">
+      <span class="pv-k" data-i18n="trayProfileLabel">配置</span>
+      <span class="pv-v" id="pvProfile">--</span>
+    </div>
+  </div>
+
+  <div class="pv-foot" id="pvFoot" role="button" tabindex="0" data-i18n="trayHint">双击图标打开完整界面</div>
+
+  <script src="popover.js"></script>
+</body>
+</html>

@@ -434,14 +434,17 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
   flex: 1; min-width: 80px; height: 18px;
   accent-color: var(--accent); cursor: pointer;
 }
-.dpi-color {
-  width: 32px; height: 32px; flex-shrink: 0; padding: 3px;
+/* 档位标识色（只读）：DPI 指示灯颜色由固件固定，不提供改色入口 */
+.dpi-swatch {
+  width: 32px; height: 32px; flex-shrink: 0; position: relative;
   border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-  background: var(--bg-inset); cursor: pointer;
+  background: var(--bg-inset);
 }
-.dpi-color::-webkit-color-swatch-wrapper { padding: 0; }
-.dpi-color::-webkit-color-swatch { border: none; border-radius: 3px; }
-.dpi-card.current .dpi-color { outline: 2px solid var(--bg-card); box-shadow: 0 0 0 1px var(--accent); }
+.dpi-swatch::after {
+  content: ''; position: absolute; inset: 5px; border-radius: 3px;
+  background: var(--sw, var(--accent));
+}
+.dpi-card.current .dpi-swatch { outline: 2px solid var(--bg-card); box-shadow: 0 0 0 1px var(--accent); }
 .dpi-remove {
   width: 32px; height: 32px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
@@ -449,7 +452,8 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
   color: var(--text-muted); font-size: calc(16px * var(--ui-scale)); cursor: pointer;
 }
 .dpi-remove:hover { color: var(--danger); background: rgba(240,97,107,.10); }
-.dpi-actions { margin-top: 14px; }
+.dpi-actions { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dpi-note { font-size: calc(11.5px * var(--ui-scale)); color: var(--text-dim); }
 #addDpiBtn { border-style: dashed; }
 
 /* ── DPI 双栏：档位 + 设备面板 ── */
@@ -702,6 +706,26 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
   background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
 }
 select option { background: var(--bg-popover); color: var(--text); }
+
+/* 节能调节：± 步进（对齐官方驱动的「节能调节(S)」，档位为固定秒数序列） */
+.sleep-stepper { display: flex; align-items: center; gap: 10px; }
+.step-btn {
+  width: 34px; height: var(--control-h); padding: 0; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: calc(16px * var(--ui-scale)); line-height: 1;
+  color: var(--text); background: var(--bg-inset); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: border-color var(--t-fast) ease, color var(--t-fast) ease, background-color var(--t-fast) ease;
+}
+.step-btn:hover:not(:disabled) { border-color: var(--accent-border); color: var(--accent); }
+.step-btn:disabled { opacity: .4; cursor: default; }
+.step-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.sleep-value {
+  display: inline-flex; align-items: baseline; gap: 3px; min-width: 74px;
+  justify-content: center; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: calc(15px * var(--ui-scale)); color: var(--text);
+}
+.sleep-unit { font-size: calc(12px * var(--ui-scale)); color: var(--text-dim); }
 
 .opt-item { display: grid; grid-template-columns: 47px 1fr; row-gap: 5px; align-items: center; }
 .opt-item .switch-label { grid-column: 1 / -1; }

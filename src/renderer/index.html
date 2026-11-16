@@ -121,6 +121,7 @@
             <div id="dpiList" class="dpi-list"></div>
             <div class="dpi-actions">
               <button id="addDpiBtn" class="btn btn-ghost" data-i18n="addDpi">新增档位</button>
+              <span class="dpi-note" data-i18n="dpiColorNote">DPI 指示灯颜色由鼠标固件固定，官方驱动同样没有改色入口；左侧色块只用于区分档位</span>
             </div>
           </div>
           <aside class="device-panel" id="devicePanel">
@@ -194,6 +195,11 @@
             <div class="opt-desc" data-i18n="lodDesc">设置传感器在鼠标抬起时，最小工作高度</div>
           </div>
           <div class="perf-card">
+            <h3 data-i18n="sensorMode">性能模式</h3>
+            <div id="modeList" class="rate-list"></div>
+            <div class="opt-desc" id="modeDesc"></div>
+          </div>
+          <div class="perf-card">
             <h3 data-i18n="sensorOptions">传感器修正选项</h3>
             <div class="opt-item">
               <label class="switch-label"><input type="checkbox" id="motionSync" /><span class="switch"></span><span class="opt-name" data-i18n="motionSync">运动同步</span></label>
@@ -214,16 +220,13 @@
             <div class="opt-desc" data-i18n="debounceDesc">如果出现双击，请将按键延时调到8ms或更高直至没有双击</div>
           </div>
           <div class="perf-card">
-            <h3 data-i18n="sleepTime">休眠时间</h3>
-            <select id="sleepTime" class="button-select">
-              <option value="10">10s</option>
-              <option value="30">30s</option>
-              <option value="60">1m</option>
-              <option value="300">5m</option>
-              <option value="600">10m</option>
-              <option value="1800">30m</option>
-            </select>
-            <div class="opt-desc" data-i18n="sleepTimeDesc">鼠标无操作该时长后进入休眠（低功耗）模式</div>
+            <h3 data-i18n="sleepTime">节能调节</h3>
+            <div class="sleep-stepper">
+              <button id="sleepDown" class="step-btn" type="button">−</button>
+              <span class="sleep-value"><span id="sleepValue">60</span><span class="sleep-unit">s</span></span>
+              <button id="sleepUp" class="step-btn" type="button">+</button>
+            </div>
+            <div class="opt-desc" data-i18n="sleepTimeDesc">鼠标静置后，到停止工作的时间</div>
           </div>
         </div>
       </section>

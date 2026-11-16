@@ -71,6 +71,37 @@ test('去抖/火力键/睡眠：[5, sub, ...]', () => {
   assert.deepEqual([...P.buildSetDebounce(99)], [5, 1, 30, 0, 0, 0, 0, 0]); // 上限 30
   assert.deepEqual([...P.buildSetFireKey(2, 5)], [5, 2, 2, 5, 0, 0, 0, 0]);
   assert.deepEqual([...P.buildSetSleepTime(600)], [5, 3, 88, 2, 0, 0, 0, 0]); // 600 = 0x258
+  // 节能调节官方档位 10~900s：低于 10 抬到 10，高于 900 压到 900（900 = 0x384）
+  assert.deepEqual([...P.buildSetSleepTime(5)], [5, 3, 10, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...P.buildSetSleepTime(1800)], [5, 3, 0x84, 0x03, 0, 0, 0, 0]);
+});
+
+test('节能调节档位：SLEEP_STEPS 与吸附', () => {
+  // 官方 DormancyTime 数组（chunk-v1013.js 反混淆）
+  assert.deepEqual(P.SLEEP_STEPS, [
+    10, 20, 30, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900,
+  ]);
+  assert.equal(P.nearestSleepStep(600), 600);
+  assert.equal(P.nearestSleepStep(35), 30); // 落在 30/60 之间偏 30
+  assert.equal(P.nearestSleepStep(45), 30); // 与 30/60 等距时保留先命中的较小档
+  assert.equal(P.nearestSleepStep(1000), 900);
+  assert.equal(P.nearestSleepStep(1), 10);
+  assert.equal(P.nearestSleepStep(NaN), 10);
+});
+
+test('LOD 硬件码反查（读设备配置用）', () => {
+  // PAW3950：hw 2→UI 0, hw 0→UI 1, hw 1→UI 2
+  assert.equal(P.lodFromHw(2, P.SENSOR.PAW3950), 0);
+  assert.equal(P.lodFromHw(0, P.SENSOR.PAW3950), 1);
+  assert.equal(P.lodFromHw(1, P.SENSOR.PAW3950), 2);
+  // 其他传感器直通
+  assert.equal(P.lodFromHw(1, P.SENSOR.PAW3395), 1);
+  // 越界码不抛错，回落 UI 0
+  assert.equal(P.lodFromHw(9, P.SENSOR.PAW3950), 0);
+});
+
+test('板载配置数量：硬编码与官方桌面驱动一致（5 个）', () => {
+  assert.equal(P.PROFILE_COUNT, 5);
 });
 
 test('按键映射：[6, index, k1..k4] 小端', () => {

@@ -34,6 +34,29 @@ const RATE_TABLE = [
   { hz: 2000, code: 6 },
 ];
 
+// ── 板载配置（PC 端预设）────────────────────────────────────
+/**
+ * 官方桌面驱动提供 5 个「配置」（Language/ch.xml str_profile1..5）。
+ * 实机验证（2026-11-15，G24 有线）：硬件只有 1 份配置——把 [6,9,idx] 依次写到
+ * 0..5 再回读，DPI/键位/回报率/休眠全部一模一样，只有 index 标记变化。
+ * 所以 5 个配置必须由本工具在 PC 端保存，切换时把整份配置灌进鼠标。
+ */
+const PROFILE_COUNT = 5;
+
+// ── 节能调节（休眠时间）────────────────────────────────────
+/**
+ * 官方网页驱动的 DormancyTime 档位（秒），性能页「节能调节」用 ± 逐档切换。
+ * 取自 chunk-v1013.js 的 DormancyTime 数组（反混淆后为 10..900）。
+ */
+const SLEEP_STEPS = [10, 20, 30, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900];
+
+/** 任意秒数吸附到最近的官方档位（读回设备/导入配置时用） */
+function nearestSleepStep(sec) {
+  const n = Number(sec);
+  if (!Number.isFinite(n)) return SLEEP_STEPS[0];
+  return SLEEP_STEPS.reduce((a, b) => (Math.abs(b - n) < Math.abs(a - n) ? b : a));
+}
+
 // ── LOD ───────────────────────────────────────────────────
 const LOD_TABLE = [0.7, 1, 2]; // UI 值（mm），硬件码即索引 0/1/2
 // PAW3950 的 UI→硬件码旋转映射（源自官方网页驱动 apply 流程）：
@@ -177,6 +200,13 @@ function maxDpiForSensor(sensor) {
 function lodToHw(uiLod, sensor) {
   if (uiLod < 0 || uiLod > 2) throw new RangeError(`LOD 索引越界: ${uiLod}`);
   return sensor === SENSOR.PAW3950 ? LOD_HW_3950[uiLod] : uiLod;
+}
+
+/** lodToHw 的逆映射：从 0x84,1 读到的硬件码还原成 UI 索引（读设备配置时用） */
+function lodFromHw(hw, sensor) {
+  if (sensor !== SENSOR.PAW3950) return hw;
+  const i = LOD_HW_3950.indexOf(hw);
+  return i < 0 ? 0 : i;
 }
 
 // ── 回报率钳制 ─────────────────────────────────────────────
@@ -332,9 +362,9 @@ function buildSetDebounce(t) {
 function buildSetFireKey(loop, interval) {
   return cmd(5, 2, Math.min(loop, 3), interval);
 }
-/** 睡眠时间：[5,3,tL,tH] */
+/** 睡眠时间：[5,3,tL,tH]（官方档位 10~900s，16 位） */
 function buildSetSleepTime(t) {
-  const v = Math.max(t, 10);
+  const v = Math.min(Math.max(t, 10), 900);
   return cmd(5, 3, v & 0xff, (v >> 8) & 0xff);
 }
 
@@ -503,6 +533,8 @@ module.exports = {
   LED_MODE_TABLE,
   LOD_HW_3950,
   MODEL_TABLE,
+  PROFILE_COUNT,
+  SLEEP_STEPS,
   KEY_MATRIX,
   MOUSE_KEYS,
   MEDIA_KEYS,
@@ -519,8 +551,10 @@ module.exports = {
   bytesToColor,
   // LOD / 回报率 / 型号
   lodToHw,
+  lodFromHw,
   isRateSupported,
   clampRate,
+  nearestSleepStep,
   parseModelInfo,
   parseStatusPush,
   // 命令构造
