@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-11-21T04:16:25Z",
-  "updated_at": "2026-11-21T07:30:55Z",
+  "updated_at": "2026-11-21T08:05:15Z",
   "files": {
     ".gitattributes": {
       "role": "index",
@@ -148,9 +148,9 @@
     },
     "installer/package.json": {
       "role": "index",
-      "sha256": "95a7be33335e0af3f6b6b04f91ce76d82c01800c6a695a969079ab89e8e2a500",
+      "sha256": "b9bcf4a6f173bdbeee85b8e18ddb852958140f1a1c23631f8e03ee84be46b5ca",
       "size": 265,
-      "normalized_sha256": "79c1c945d3c3d2cdb8b045b59cf23067eec94f535a0a724daeb45777c3165b9c"
+      "normalized_sha256": "4f868b22a6eead4ee78f118ca3169a8dda5bbda0acd64ee2d93b382141bb3c1b"
     },
     "installer/preload.js": {
       "role": "index",
@@ -184,15 +184,15 @@
     },
     "package-lock.json": {
       "role": "observe",
-      "sha256": "5c4430916b58e0523dcb998bc6b4828fb12abc86d2a3bbb98b9a52918f65ffbb",
+      "sha256": "bc22d6e5e884ccc7027364d6555e53575c0daa429c397a8956a17e5da39f684b",
       "size": 198996,
-      "normalized_sha256": "188a9dc354c6bc01ac3daf3d815af1aa3cd4fe4a5e47e5c758df3ea0c26e98e0"
+      "normalized_sha256": "1984b00577c0d346a07cf568af8757108c946f522d62c25af744351b9966fe70"
     },
     "package.json": {
       "role": "index",
-      "sha256": "d3b1e47c542cbd311fa9b56e49263fc86c71d734825b0b4f083d48bba2829978",
+      "sha256": "385f752f5448792146f15e32c5b409b0617f6494d5fca852b0eccd83a93d0ab0",
       "size": 2031,
-      "normalized_sha256": "a613cea0953798e23a45a5c5ba5067e97d7ed84fbb24036548f5fe06f01c5b01"
+      "normalized_sha256": "f511867a9c0e9021af8c4c3523f00efc68249d9317521c88e38cf682c3ea096f"
     },
     "src/main/hid.js": {
       "role": "index",
