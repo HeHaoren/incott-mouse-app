@@ -21,6 +21,9 @@
       <span id="battery" class="battery hidden" tabindex="0" role="button">
         <span class="battery-icon">🔋</span><span id="batteryVal">--</span>%
       </span>
+      <button id="updateTopBtn" class="btn btn-ghost icon-btn update-top" title="检查更新" aria-label="检查更新">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3.4v7.8"/><path d="M6.8 8.6 10 11.8l3.2-3.2"/><path d="M4.2 14.4v1.2a1.2 1.2 0 0 0 1.2 1.2h9.2a1.2 1.2 0 0 0 1.2-1.2v-1.2"/></svg>
+      </button>
       <div class="settings-wrap">
         <button id="settingsBtn" class="btn btn-ghost icon-btn" title="设置" aria-label="设置">
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 6.2h13.2M3.4 13.8h13.2"/><circle cx="7.6" cy="6.2" r="2.1" class="dot-solid"/><circle cx="12.9" cy="13.8" r="2.1" class="dot-solid"/></svg>
@@ -53,6 +56,13 @@
               <option value="1.5">150%</option>
             </select>
           </label>
+          <div class="settings-item settings-item-update">
+            <span class="settings-text">
+              <span data-i18n="settingsUpdate">软件更新</span>
+              <span class="settings-desc" id="updateStatus" data-i18n="settingsUpdateIdle">检查是否有新版本</span>
+            </span>
+            <button type="button" id="updateBtn" class="update-btn" data-i18n="updateCheck">检查</button>
+          </div>
         </div>
       </div>
       <div class="lang-wrap">
@@ -121,6 +131,7 @@
             <div id="dpiList" class="dpi-list"></div>
             <div class="dpi-actions">
               <button id="addDpiBtn" class="btn btn-ghost" data-i18n="addDpi">新增档位</button>
+              <span class="dpi-note" data-i18n="dpiMinNote">DPI 最小值为 50：低于 50 的数值（含 0）会自动按 50 处理</span>
               <span class="dpi-note" data-i18n="dpiColorNote">DPI 指示灯颜色由鼠标固件固定，官方驱动同样没有改色入口；左侧色块只用于区分档位</span>
             </div>
           </div>

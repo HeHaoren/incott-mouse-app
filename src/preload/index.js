@@ -74,6 +74,16 @@ contextBridge.exposeInMainWorld('api', {
   /** 用系统浏览器打开 https 链接 */
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
 
+  // ── 软件更新（GitHub Releases）────────────────────────────
+  /** 检查最新正式版本 */
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  /** 下载该版本安装包（进度走 onUpdateProgress） */
+  downloadUpdate: (tag) => ipcRenderer.invoke('update:download', tag),
+  /** 启动已下载的安装器（应用随后退出） */
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  /** 订阅下载进度 { received, total, percent } */
+  onUpdateProgress: (cb) => ipcRenderer.on('update:progress', (_e, v) => cb(v)),
+
   /** 关于对话框 */
   showAbout: () => ipcRenderer.invoke('app:about'),
 

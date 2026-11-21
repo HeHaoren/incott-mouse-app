@@ -103,6 +103,24 @@ test('.ict 导入：magic 错误返回 null；多配置取第一个', () => {
   assert.equal(back.rate, 1000); // 第一个配置
 });
 
+test('DPI 下限归一：小于 50 一律按 50，导入后不保留 0/负数', () => {
+  assert.equal(fmt.clampDpi(0, 800), 50);
+  assert.equal(fmt.clampDpi(-300, 800), 50);
+  assert.equal(fmt.clampDpi(49, 800), 50);
+  assert.equal(fmt.clampDpi(50, 800), 50);
+  assert.equal(fmt.clampDpi(1200, 800), 1200);
+  assert.equal(fmt.clampDpi(45000, 800), 45000);
+  assert.equal(fmt.clampDpi('abc', 800), 800);
+  assert.equal(fmt.clampDpi(null, 800), 800);
+  // .ict 导入：dpi[0]:0 / dpiy[1]:-100 都归一到 50
+  const ict = `magic:${fmt.MAGIC_PROFILE};name:t;dpiuinum:2;dpi[0]:0;dpiy[0]:800;dpi[1]:1600;dpiy[1]:-100;`;
+  const p = fmt.importProfile(ict);
+  assert.deepEqual(p.dpiLevels.map((l) => [l.x, l.y]), [[50, 800], [1600, 50]]);
+  // 正常配置往返不受影响
+  const back = fmt.importProfile(fmt.exportProfile(sampleProfile()));
+  assert.deepEqual(back.dpiLevels, sampleProfile().dpiLevels);
+});
+
 test('.icm 往返：循环类型换算与键名转换', () => {
   const macros = [
     {

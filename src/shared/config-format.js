@@ -259,12 +259,12 @@ function importProfile(text) {
   const n = num(f.get('dpiuinum')) ?? 0;
   cfg.dpiLevels = [];
   for (let i = 0; i < n; i++) {
-    const x = num(f.get(`dpi[${i}]`));
-    const y = num(f.get(`dpiy[${i}]`));
+    const x = clampDpi(num(f.get(`dpi[${i}]`)), 800);
+    const y = clampDpi(num(f.get(`dpiy[${i}]`)), x);
     const c = num(f.get(`dpicolor[${i}]`));
     cfg.dpiLevels.push({
-      x: x ?? 800,
-      y: y ?? x ?? 800,
+      x,
+      y,
       color: c != null ? colorIntToCss(c) : '#4da3ff',
     });
   }
@@ -281,6 +281,18 @@ function importProfile(text) {
   }
   if (cfg.currentDpi >= cfg.dpiLevels.length) cfg.currentDpi = 0;
   return cfg;
+}
+
+/**
+ * DPI 下限归一：小于 50（含 0、负数、非数字）一律按 50 处理。
+ * 协议最小 DPI 是 50（硬件值 0）；0 会让下发命令构造抛 RangeError。
+ * 上限不在这里收，仍由传感器与设备钳制。
+ */
+function clampDpi(v, fallback) {
+  if (v == null || v === '') return fallback;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return n < 50 ? 50 : n;
 }
 
 // ── .icm 宏导出 ──────────────────────────────────────────────
@@ -362,6 +374,7 @@ module.exports = {
   keyTupleToButton,
   exportProfile,
   importProfile,
+  clampDpi,
   exportMacros,
   importMacros,
 };

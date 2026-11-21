@@ -84,6 +84,16 @@ function toggleSettingsMenu() {
   }
 }
 
+/** 顶栏更新按钮：展开设置面板并立即检查（让用户看到状态行） */
+function openUpdatePanel() {
+  const menu = $('#settingsMenu');
+  if (menu.classList.contains('hidden')) {
+    $('#langMenu').classList.add('hidden');
+    menu.classList.remove('hidden');
+  }
+  checkForUpdates(true);
+}
+
 /** 更新设置项（开机自启 / 静默启动），成功/失败都弹提示 */
 async function onSettingChange(patch, labelKey, enabled) {
   try {
@@ -142,6 +152,92 @@ async function loadSettings() {
   }
 }
 
+// ── 软件更新（GitHub Releases）──────────────────────────────
+let updateInfo = null; // 最近一次检查结果
+let updateBusy = false; // 检查/下载进行中
+
+function setUpdateStatus(text) {
+  const el = $('#updateStatus');
+  if (el) el.textContent = text;
+}
+
+/** 按当前状态重绘更新行（语言切换、renderAll 后调用） */
+function renderUpdateRow() {
+  if (updateBusy) return; // 进行中不覆盖进度/状态
+  const btn = $('#updateBtn');
+  if (!btn) return;
+  // 顶栏按钮上的小红点：有新版本时提示
+  const topBtn = $('#updateTopBtn');
+  if (topBtn) topBtn.classList.toggle('has-update', !!(updateInfo && updateInfo.hasUpdate));
+  btn.classList.remove('accent');
+  if (updateInfo && updateInfo.hasUpdate) {
+    setUpdateStatus(t('updateAvailable').replace('{latest}', updateInfo.latest).replace('{current}', updateInfo.current));
+    btn.textContent = t('updateDownload');
+    btn.classList.add('accent');
+  } else if (updateInfo) {
+    setUpdateStatus(t('updateLatest').replace('{current}', updateInfo.current));
+    btn.textContent = t('updateCheck');
+  } else {
+    setUpdateStatus(t('settingsUpdateIdle'));
+    btn.textContent = t('updateCheck');
+  }
+}
+
+/** manual=false 时用于启动后的静默检查：失败不打扰用户 */
+async function checkForUpdates(manual = true) {
+  if (updateBusy) return;
+  const btn = $('#updateBtn');
+  updateBusy = true;
+  if (btn) btn.disabled = true;
+  setUpdateStatus(t('updateChecking'));
+  try {
+    const info = await window.api.checkUpdate();
+    updateInfo = info;
+    updateBusy = false;
+    if (btn) btn.disabled = false;
+    renderUpdateRow();
+    if (info.hasUpdate && !manual) {
+      toast(t('updateAvailableToast').replace('{v}', info.latest));
+    }
+  } catch (e) {
+    updateInfo = null;
+    updateBusy = false;
+    if (btn) btn.disabled = false;
+    const topBtn = $('#updateTopBtn');
+    if (topBtn) topBtn.classList.remove('has-update');
+    if (manual) {
+      setUpdateStatus(t('updateCheckFailed') + errMsg(e));
+      if (btn) btn.textContent = t('updateRetry');
+    } else {
+      renderUpdateRow();
+    }
+  }
+}
+
+/** 下载安装包并启动安装器（安装器会结束本进程） */
+async function downloadAndInstallUpdate() {
+  if (updateBusy || !updateInfo || !updateInfo.hasUpdate) return;
+  const btn = $('#updateBtn');
+  updateBusy = true;
+  if (btn) btn.disabled = true;
+  setUpdateStatus(t('updateDownloading') + ' 0%');
+  try {
+    await window.api.downloadUpdate(updateInfo.tag);
+    setUpdateStatus(t('updateInstalling'));
+    await window.api.installUpdate();
+  } catch (e) {
+    updateBusy = false;
+    if (btn) btn.disabled = false;
+    setUpdateStatus(t('updateDownloadFailed') + errMsg(e));
+    btn.textContent = t('updateDownload');
+  }
+}
+
+function onUpdateClick() {
+  if (updateInfo && updateInfo.hasUpdate) downloadAndInstallUpdate();
+  else checkForUpdates(true);
+}
+
 /** 选择语言 */
 function selectLang(lang) {
   $('#langMenu').classList.add('hidden');
@@ -168,6 +264,8 @@ async function init() {
   startBatteryAutoRefresh();
   renderAll();
   refreshDeviceState();
+  // 启动 8 秒后静默检查更新（失败不打扰；发现新版本弹一次提示）
+  setTimeout(() => checkForUpdates(false), 8000);
 }
 
 /** 侧栏底部：版本号 + 仓库链接 */
@@ -246,12 +344,21 @@ function bindEvents() {
       toast(t('settingSaveFailed'), 'error');
     }
   });
-  // 点击别处关闭语言/设置菜单
+  // 软件更新：顶栏按钮（展开设置并检查）/ 设置行按钮（检查 → 下载并安装）
+  $('#updateTopBtn').addEventListener('click', openUpdatePanel);
+  $('#updateBtn').addEventListener('click', onUpdateClick);
+  if (window.api.onUpdateProgress) {
+    window.api.onUpdateProgress((p) => {
+      if (!updateBusy) return;
+      setUpdateStatus(t('updateDownloading') + ' ' + (p.percent || 0) + '%');
+    });
+  }
+  // 点击别处关闭语言/设置菜单（顶栏更新按钮也算「设置区」，否则它一展开就会被这里收起）
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.lang-wrap')) {
       $('#langMenu').classList.add('hidden');
     }
-    if (!e.target.closest('.settings-wrap')) {
+    if (!e.target.closest('.settings-wrap') && !e.target.closest('#updateTopBtn')) {
       $('#settingsMenu').classList.add('hidden');
     }
   });
@@ -785,6 +892,18 @@ function snapDpi(v) {
   return clamp(Math.round(v / 50) * 50, 50, state.maxDpi);
 }
 
+/**
+ * DPI 下限归一：小于 50（含 0、负数、非数字）一律按 50 处理。
+ * 协议最小 DPI 是 50（硬件值 0）：0 会让 dpiToHw 返回 -1，整次 apply 抛 RangeError。
+ * .ict 导入、旧存档、下发三处都过这一道。
+ */
+function dpiFloor(v, fallback) {
+  if (v == null || v === '') return fallback;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return n < 50 ? 50 : n;
+}
+
 /** 将 UI 档位数量对齐到鼠标实际档位数（截断或补齐），并同步当前档位 */
 function syncDpiLevels(levels, current) {
   const last = state.dpiLevels[state.dpiLevels.length - 1] || { x: 800, y: 800, color: '#4da3ff' };
@@ -1156,11 +1275,14 @@ function applyDeviceSnapshot(snap) {
   const p = state.profiles[slot] || defaultProfile();
 
   if (Array.isArray(snap.slots) && snap.slots.length) {
-    p.dpiLevels = snap.slots.map((s, i) => ({
-      x: s.dpi,
-      y: s.dpi,
-      color: dpiColorAt(i), // 颜色固定，忽略设备里存的旧字节
-    }));
+    // 0x82 读命令只有 slot、没有轴参数，回读不出 Y 轴（官方驱动同样只写不读 Y）。
+    // 因此这里只认设备回读的 X：若它和本地记录一致，说明 Y 没被外部改过，保留本地 Y；
+    // 若 X 变了（在别的驱动/机器上改过），两轴按一致处理，避免保留过期的 Y。
+    p.dpiLevels = snap.slots.map((s, i) => {
+      const prev = p.dpiLevels[i];
+      const y = prev && prev.x === s.dpi ? prev.y : s.dpi;
+      return { x: s.dpi, y, color: dpiColorAt(i) }; // 颜色固定，忽略设备里存的旧字节
+    });
   }
   if (snap.current != null) p.currentDpi = snap.current;
   if (snap.rate) p.rate = snap.rate;
@@ -1562,11 +1684,14 @@ function buildApplyOps() {
   // 每档的灯色也走同一条命令的 buf[4..6]，官方驱动恒填 0（这就是"改灯色不生效"的原因）
   state.dpiLevels.forEach((lv, i) => {
     const color = dpiColorAt(i);
-    if (state.xySplit && lv.x !== lv.y) {
-      ops.push({ action: 'setDpi', args: [i, lv.x, 1, color] }); // X 轴
-      ops.push({ action: 'setDpi', args: [i, lv.y, 2, color] }); // Y 轴
+    // 下发前再兜一次底：低于 50 的 DPI 一律按 50，绝不让 0 进命令
+    const x = dpiFloor(lv.x, 800);
+    const y = dpiFloor(lv.y, x);
+    if (state.xySplit && x !== y) {
+      ops.push({ action: 'setDpi', args: [i, x, 1, color] }); // X 轴
+      ops.push({ action: 'setDpi', args: [i, y, 2, color] }); // Y 轴
     } else {
-      ops.push({ action: 'setDpi', args: [i, lv.x, 0, color] });
+      ops.push({ action: 'setDpi', args: [i, x, 0, color] });
     }
   });
 
@@ -1644,15 +1769,19 @@ async function onImportProfile() {
     saveLocalConfig(); // 导入的配置写入当前槽并持久化
     flashStatus(t('configImported'));
   } catch (e) {
-    flashStatus(t('importFailed') + e.message, true);
+    flashStatus(t('importFailed') + errMsg(e), true);
   }
 }
 
 function applyImportedProfile(p) {
   if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
-    state.dpiLevels = p.dpiLevels.map((lv, i) => ({ x: lv.x, y: lv.y, color: dpiColorAt(i) }));
-    // X/Y 不一致时自动打开 XY 分离显示
-    state.xySplit = p.dpiLevels.some((lv) => lv.x !== lv.y);
+    // 低于 50 的 DPI 统一按 50 处理（importProfile 已归一，这里再兜一次底）
+    state.dpiLevels = p.dpiLevels.map((lv, i) => {
+      const x = dpiFloor(lv.x, 800);
+      return { x, y: dpiFloor(lv.y, x), color: dpiColorAt(i) };
+    });
+    // X/Y 不一致时自动打开 XY 分离显示（用归一后的值判断）
+    state.xySplit = state.dpiLevels.some((lv) => lv.x !== lv.y);
   }
   state.currentDpi = clamp(p.currentDpi ?? 0, 0, state.dpiLevels.length - 1);
   if (p.rate) state.rate = p.rate;
@@ -1727,11 +1856,15 @@ function normalizeProfile(p) {
   if (!p || typeof p !== 'object') return base;
   const out = { ...base };
   if (Array.isArray(p.dpiLevels) && p.dpiLevels.length) {
-    out.dpiLevels = p.dpiLevels.map((lv, i) => ({
-      x: Number(lv.x) || base.dpiLevels[0].x,
-      y: Number(lv.y) || Number(lv.x) || base.dpiLevels[0].y,
-      color: dpiColorAt(i), // 颜色固定为官方六色，不受旧存档影响
-    }));
+    // 旧存档里低于 50 的 DPI（含 0/负数）统一按 50 处理
+    out.dpiLevels = p.dpiLevels.map((lv, i) => {
+      const x = dpiFloor(lv.x, base.dpiLevels[0].x);
+      return {
+        x,
+        y: dpiFloor(lv.y, x),
+        color: dpiColorAt(i), // 颜色固定为官方六色，不受旧存档影响
+      };
+    });
   }
   if (p.currentDpi != null) out.currentDpi = clamp(p.currentDpi, 0, out.dpiLevels.length - 1);
   ['xySplit', 'ripple', 'angleSnap', 'motionSync'].forEach((k) => {
@@ -1803,6 +1936,7 @@ function renderAll() {
   $('#angleSnap').checked = state.angleSnap;
   $('#motionSync').checked = state.motionSync;
   $('#debounce').value = state.debounce;
+  renderUpdateRow(); // 语言切换后更新行文案跟随
 }
 
 function clamp(v, min, max) {

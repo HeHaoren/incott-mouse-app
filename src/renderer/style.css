@@ -264,6 +264,31 @@ input:focus-visible, select:focus-visible { border-color: var(--accent); }
 .scale-select:hover { border-color: var(--border-strong); }
 .scale-select:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
+/* 顶栏更新按钮：有新版本时右上角亮一个点 */
+.update-top { position: relative; }
+.update-top.has-update::after {
+  content: ""; position: absolute; top: 5px; right: 5px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg-elev), 0 0 6px var(--accent);
+}
+
+/* 软件更新：右侧动作按钮 */
+.settings-item-update { justify-content: space-between; gap: 12px; cursor: default; }
+.settings-item-update:hover { background: none; }
+.update-btn {
+  flex: 0 0 auto; height: 26px; padding: 0 10px;
+  background: var(--bg-inset); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: calc(12px * var(--ui-scale));
+  white-space: nowrap; cursor: pointer;
+  transition: border-color var(--t-fast) ease, background-color var(--t-fast) ease;
+}
+.update-btn:hover:not(:disabled) { border-color: var(--border-strong); }
+.update-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.update-btn:disabled { opacity: .55; cursor: default; }
+.update-btn.accent { background: var(--accent-strong); border-color: var(--accent); color: #fff; }
+
 /* ── 按钮 ── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;

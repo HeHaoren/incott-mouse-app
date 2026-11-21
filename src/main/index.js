@@ -14,7 +14,7 @@
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, dialog, shell, net } = require('electron');
 const hid = require('./hid');
 const { createTrayPopover } = require('./tray-popover');
 const P = require('../shared/protocol');
@@ -444,6 +444,128 @@ async function withDevice(fn) {
   });
 }
 
+// ── 软件更新（GitHub Releases，走 releases.atom 避开 API 限流）────
+const UPDATE_REPO = 'HeHaoren/incott-mouse-app';
+const UPDATE_ATOM = `https://github.com/${UPDATE_REPO}/releases.atom`;
+let pendingUpdatePath = null; // 已下载待启动的安装包（只由主进程写入，不信任渲染层传路径）
+
+/** HTTPS GET（Electron net 跟随重定向，走系统代理），返回 { status, body } */
+function httpGetText(url, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const req = net.request({ method: 'GET', url, redirect: 'follow' });
+    req.setHeader('User-Agent', `Incott-Mouse-Driver/${app.getVersion()}`);
+    const timer = setTimeout(() => {
+      try { req.abort(); } catch (_) { /* 已结束 */ }
+      reject(new Error('请求超时'));
+    }, timeoutMs);
+    req.on('response', (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => {
+        clearTimeout(timer);
+        resolve({ status: res.statusCode, body });
+      });
+    });
+    req.on('error', (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
+    req.end();
+  });
+}
+
+function decodeXml(s) {
+  return String(s)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+/** 版本号 → [major, minor, patch]，解析失败返回 null */
+function semverParts(v) {
+  const m = String(v).match(/(\d+)\.(\d+)\.(\d+)/);
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+
+/** a 比 b 新返回 1，相同 0，更旧 -1 */
+function compareVersion(a, b) {
+  const pa = semverParts(a);
+  const pb = semverParts(b);
+  if (!pa || !pb) return 0;
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] !== pb[i]) return pa[i] > pb[i] ? 1 : -1;
+  }
+  return 0;
+}
+
+/** 读 releases.atom，取最新正式版本（跳过 preview 之类带后缀的标签） */
+async function fetchLatestRelease() {
+  const { status, body } = await httpGetText(UPDATE_ATOM);
+  if (status !== 200) throw new Error(`HTTP ${status}`);
+  const entries = body.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+  for (const entry of entries) {
+    const idm = entry.match(/<id>[^<]*\/([^<]+)<\/id>/);
+    const tag = idm ? idm[1] : '';
+    if (!/^v\d+\.\d+\.\d+$/.test(tag)) continue;
+    const linkM = entry.match(/<link[^>]*href="([^"]+)"/);
+    const titleM = entry.match(/<title>([^<]*)<\/title>/);
+    const contentM = entry.match(/<content[^>]*>([\s\S]*?)<\/content>/);
+    const notes = (contentM ? decodeXml(contentM[1]) : '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 600);
+    return {
+      tag,
+      latest: tag.slice(1),
+      title: titleM ? decodeXml(titleM[1]) : tag,
+      pageUrl: linkM ? linkM[1] : `https://github.com/${UPDATE_REPO}/releases`,
+      notes,
+    };
+  }
+  throw new Error('没有找到正式版本');
+}
+
+/** 从该版本的资源列表页找安装包下载地址（不依赖 API） */
+async function findSetupAssetUrl(tag) {
+  const url = `https://github.com/${UPDATE_REPO}/releases/expanded_assets/${encodeURIComponent(tag)}`;
+  const { status, body } = await httpGetText(url);
+  if (status !== 200) throw new Error(`HTTP ${status}`);
+  const links = [...body.matchAll(/href="([^"]*\/releases\/download\/[^"]+\.exe)"/g)].map((m) => m[1]);
+  const setup = links.find((l) => /Setup/i.test(l)) || links[0];
+  if (!setup) throw new Error('该版本没有可下载的安装包');
+  return setup.startsWith('http') ? setup : `https://github.com${setup}`;
+}
+
+/** 下载到本地，按百分比回调进度 */
+function downloadUpdateFile(url, dest, onProgress) {
+  return new Promise((resolve, reject) => {
+    const req = net.request({ method: 'GET', url, redirect: 'follow' });
+    req.setHeader('User-Agent', `Incott-Mouse-Driver/${app.getVersion()}`);
+    req.on('response', (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`HTTP ${res.statusCode}`));
+        return;
+      }
+      const total = Number(res.headers['content-length']) || 0;
+      let received = 0;
+      const out = fs.createWriteStream(dest);
+      res.on('data', (chunk) => {
+        received += chunk.length;
+        onProgress(received, total);
+      });
+      res.pipe(out);
+      out.on('finish', () => resolve(dest));
+      out.on('error', reject);
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 // ── IPC 注册 ────────────────────────────────────────────────
 function registerIpc() {
   ipcMain.handle('mouse:list', () => hid.listDevicesAsync());
@@ -659,6 +781,52 @@ function registerIpc() {
     await shell.openExternal(url);
     return true;
   });
+  // ── 软件更新 ─────────────────────────────────────────────
+  ipcMain.handle('update:check', async () => {
+    const current = app.getVersion();
+    const rel = await fetchLatestRelease();
+    return {
+      current,
+      latest: rel.latest,
+      tag: rel.tag,
+      title: rel.title,
+      notes: rel.notes,
+      pageUrl: rel.pageUrl,
+      hasUpdate: compareVersion(rel.latest, current) > 0,
+    };
+  });
+
+  ipcMain.handle('update:download', async (_e, tag) => {
+    if (!/^v\d+\.\d+\.\d+$/.test(String(tag || ''))) throw new Error('版本号非法');
+    const url = await findSetupAssetUrl(tag);
+    const dir = path.join(app.getPath('temp'), 'IncottUpdate');
+    fs.mkdirSync(dir, { recursive: true });
+    const name = decodeURIComponent(url.split('/').pop() || 'setup.exe');
+    if (!/\.exe$/i.test(name)) throw new Error('安装包格式非法');
+    const dest = path.join(dir, name);
+    let lastPct = -1;
+    await downloadUpdateFile(url, dest, (received, total) => {
+      const percent = total ? Math.floor((received / total) * 100) : 0;
+      if (percent === lastPct) return;
+      lastPct = percent;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:progress', { received, total, percent });
+      }
+    });
+    pendingUpdatePath = dest;
+    return { name, size: fs.statSync(dest).size };
+  });
+
+  ipcMain.handle('update:install', async () => {
+    if (!pendingUpdatePath || !fs.existsSync(pendingUpdatePath)) {
+      throw new Error('安装包不存在，请重新下载');
+    }
+    const err = await shell.openPath(pendingUpdatePath);
+    if (err) throw new Error(err);
+    setTimeout(() => app.quit(), 1500); // 安装器会自己结束旧进程，这里主动退出
+    return true;
+  });
+
   // 关于（Windows 去掉了原生菜单栏，这里补回入口）
   ipcMain.handle('app:about', async () => {
     const { dialog } = require('electron');
@@ -692,6 +860,7 @@ function registerIpc() {
       filters: [{ name: 'Incott Profile', extensions: ['ict'] }],
     });
     if (canceled || !filePaths.length) return { canceled: true };
+    // importProfile 已把 <50 的 DPI（含 0/负数）统一按 50 归一
     const profile = fmt.importProfile(fs.readFileSync(filePaths[0], 'utf8'));
     if (!profile) throw new Error('不是有效的 .ict 配置文件（magic 校验失败）');
     return { canceled: false, profile };
