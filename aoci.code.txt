@@ -6,7 +6,7 @@
 .rivet-config.json[FC4T]: F:声明 Rivet 宿主的验证命令：npm test 与 tsc --noEmit | R:- | A:verify.test,verify.typecheck | S:本仓库是纯 JavaScript 无 tsconfig，typecheck 的 tsc --noEmit 实际不可用，只有 npm test 可跑
 .rivet.md[SC3T]: F:Rivet/天枢 会话启动读取的项目摘要：技术栈与约定 | R:code:.rivet-config.json | A:Stack,Conventions | S:Stack 生成行由 /init 从 .rivet-config.json 渲染，手改会被覆盖
 AGENTS.md[SC7S]: F:Agent 操作纪律：高危命令硬闸门、安全保护、通用执行纪律，以及 AOCI 仓库认知托管区块 | R:- | A:- | S:AOCI begin/end 区块由 aoci init 生成并维护，重跑 init 会按 Locale 重渲染整块，区块外内容不受 AOCI 管理
-README.md[SG6S]: F:项目门面：功能清单、支持设备、指示灯颜色的常见误解、技术栈、运行测试打包与目录结构 | R:code:docs/led-behavior.md,code:docs/protocol.md | A:- | S:明确写死「DPI 档位颜色固定官方六色、界面无改色入口」，不要再把改色功能加回界面
+README.md[SG6S]: F:项目门面：功能清单与软件更新、支持设备、指示灯颜色的常见误解、技术栈、运行测试打包与目录结构 | R:code:docs/led-behavior.md,code:docs/protocol.md | A:- | S:明确写死「DPI 档位颜色固定官方六色、界面无改色入口」，不要再把改色功能加回界面；软件更新只认 vX.Y.Z 正式版，走 releases.atom 与 expanded_assets 页面而不是 GitHub API
 package.json[FV6T]: F:应用清单与 electron-builder 配置：入口、start/test/dist/setup 脚本、NSIS 与自绘安装器产物命名 | R:code:installer/package.json | A:scripts.dist,scripts.setup,scripts.test | S:nsis.artifactName 会覆盖 win.artifactName，两者必须不同否则 setup 收集会覆盖 NSIS 包；npmRebuild:false 因 node-hid 为 N-API 且机器无 VS
 
 ===/<repository>/.workbuddy/memory/===
@@ -19,7 +19,7 @@ package.json[FV6T]: F:应用清单与 electron-builder 配置：入口、start/t
 MEMORY.md[SG6S]: F:项目长期记忆：环境与推送网络、协议关键事实、稳定性铁律、.ict/.icm 格式坑、代码约定与用户偏好 | R:code:src/main/index.js,code:src/shared/protocol.js | A:- | S:HID 访问必须走 withIo 串行队列，队列内不得再调 withDevice（会自锁）；设备三铁律：挂 error 监听、枚举缓存可失效、按实例判定断连
 
 ===/<repository>/docs/===
-HANDOFF.md[SG6S]: F:交接文档：已完成功能、技术架构、UI 栅格约定、协议核心、待办、环境关键坑与发版流程 | R:code:docs/protocol.md | A:- | S:PATH 里的 node 是天枢 wrapper，测试与 node-gyp 必须用 /f/AI Agent/nodejs/node.exe；启动 electron 前必须 unset ELECTRON_RUN_AS_NODE
+HANDOFF.md[SG6S]: F:交接文档：已完成功能（含软件更新）、技术架构、UI 栅格约定、协议核心、待办、环境关键坑与发版流程 | R:code:docs/protocol.md | A:- | S:PATH 里的 node 是天枢 wrapper，测试与 node-gyp 必须用 /f/AI Agent/nodejs/node.exe；启动 electron 前必须 unset ELECTRON_RUN_AS_NODE；更新器靠 Setup 资产名里的 Setup 前缀挑选，发版不要改名
 led-behavior.md[SG5T]: F:指示灯颜色说明：G24 两套灯各自被什么驱动、回报率颜色对照，以及 DPI 页为何不提供改色 | R:code:docs/protocol.md,code:src/renderer/app.js | A:- | S:命令 2 的 buf[4..6] 能写能回读但固件不点灯；「配置 2 颜色正常」其实是切配置顺带改了回报率
 protocol.md[SG8M]: F:逆向 HID 协议完整文档：设备识别、8 字节 Feature Report 命令表、读命令与电量推送、键码编码、宏格式与 apply 顺序 | R:code:src/shared/protocol.js,code:src/main/hid.js | A:- | S:Feature Report 数据区固定 8 字节，不能按 64 字节读「电压」；XY 独立已被实机证实，按 flag=1/2 分两包（间隔≥100ms）下发，旧「不支持」结论作废
 
@@ -38,22 +38,22 @@ setup.js[DU3S]: F:安装器渲染层状态机：读取安装信息、启动安�
 
 ===/<repository>/src/main/===
 hid.js[IH7M]: F:HID 通信层：worker 线程枚举、TTL 缓存与强制重枚、Feature/Output/Input Report 收发、Col02 优先打开与断连回调 | R:code:src/shared/protocol.js | A:listDevicesAsync,openDevice,MouseDevice,onData,onError,invalidateCache | S:枚举必须放 worker（Windows 同步枚举约 15 秒会卡死主进程）；打包后必须把 require.resolve('node-hid') 的绝对路径传给 worker，否则 asar 内解析失败
-index.js[EH9L]: F:Electron 主进程入口：窗口与自绘标题栏、托盘与浮层、HID IPC、电量轮询、配置/宏导入导出与卸载流程 | R:code:src/main/hid.js,code:src/main/tray-popover.js,code:src/shared/protocol.js,code:src/shared/config-format.js | A:registerIpc,withIo,withDevice,EXEC_ACTIONS,READ_ACTIONS,runUninstall | S:所有设备操作必须经 withIo 串行队列（读写共用通道，并发会读到对方回包）；写操作期间 writing=true 让电量轮询跳过；关窗只隐藏到托盘，quitting 才真正退出
+index.js[EH9L]: F:Electron 主进程入口：窗口与自绘标题栏、托盘与浮层、HID IPC、电量轮询、配置/宏导入导出、卸载与软件更新（检查/下载/启动安装器） | R:code:src/main/hid.js,code:src/main/tray-popover.js,code:src/shared/protocol.js,code:src/shared/config-format.js | A:registerIpc,withIo,withDevice,EXEC_ACTIONS,READ_ACTIONS,runUninstall | S:所有设备操作必须经 withIo 串行队列（读写共用通道，并发会读到对方回包）；写操作期间 writing=true 让电量轮询跳过；关窗只隐藏到托盘，quitting 才真正退出；更新安装包路径只由主进程的 pendingUpdatePath 持有，绝不接受渲染层传入
 tray-popover.js[DU5S]: F:托盘信息浮层窗口：惰性创建与预热、贴托盘图标定位、失焦收起与防重开守卫 | R:code:src/renderer/popover.html | A:createTrayPopover,toggle,position,warmup | S:显示后 180ms 内失焦不算点击外部；收起后 260ms 内不再重开，否则「失焦那一下点击」会立刻把浮层弹回来
 
 ===/<repository>/src/preload/===
-index.js[EG6S]: F:contextBridge 桥接：暴露 api 命名空间（设备/IPC/托盘/设置/导入导出）以及 i18n 与 keynames | R:code:src/shared/i18n.js,code:src/shared/keynames.js | A:exposeInMainWorld | S:暴露的全局名 api 不可配置，渲染层顶层不得再声明同名 const（会 SyntaxError）；外链只允许 https
+index.js[EG6S]: F:contextBridge 桥接：暴露 api 命名空间（设备/IPC/托盘/设置/导入导出/软件更新）以及 i18n 与 keynames | R:code:src/shared/i18n.js,code:src/shared/keynames.js | A:exposeInMainWorld | S:暴露的全局名 api 不可配置，渲染层顶层不得再声明同名 const（会 SyntaxError）；外链只允许 https
 
 ===/<repository>/src/renderer/===
-app.js[DU9L]: F:渲染进程全部交互逻辑：DPI 档位编辑、键位映射、性能/灯效设置、5 份配置预设、宏编辑、导入导出与应用流程 | R:code:src/shared/config-format.js,code:src/renderer/index.html,code:src/renderer/style.css | A:renderAll,buildApplyOps,switchProfile,applyDeviceSnapshot,onConnect,renderLighting | S:档位颜色固定 DPI_LEVEL_COLORS 官方六色，禁止再加改色入口；buildApplyOps 顺序即协议 apply 流程，XY 分离按 flag=1/2 分两包；导入配置后按 XY 是否一致自动开分离显示
-index.html[EU7M]: F:主界面结构：顶栏（设备/电量/设置/语言/窗口按钮）、五页签、DPI 设备面板、底栏配置与应用按钮 | R:code:src/renderer/app.js,code:src/renderer/style.css | A:- | S:静态文案一律走 data-i18n 属性；动态生成的节点由 app.js 渲染后再按当前语言取词
+app.js[DU9L]: F:渲染进程全部交互逻辑：DPI 档位编辑、键位映射、性能/灯效设置、5 份配置预设、宏编辑、导入导出、应用流程与软件更新 UI | R:code:src/shared/config-format.js,code:src/renderer/index.html,code:src/renderer/style.css | A:renderAll,buildApplyOps,switchProfile,applyDeviceSnapshot,onConnect,checkForUpdates | S:档位颜色固定 DPI_LEVEL_COLORS 官方六色，禁止再加改色入口；buildApplyOps 顺序即协议 apply 流程，XY 分离按 flag=1/2 分两包；导入配置后按 XY 是否一致自动开分离显示；0x82 读不出 Y，连接回读时 X 未变才保留本地 Y；低于 50 的 DPI 在导入、旧存档、下发三处统一按 50
+index.html[EU7M]: F:主界面结构：顶栏（设备/电量/检查更新/设置/语言/窗口按钮）、五页签、DPI 设备面板、底栏配置与应用按钮 | R:code:src/renderer/app.js,code:src/renderer/style.css | A:- | S:静态文案一律走 data-i18n 属性；动态生成的节点由 app.js 渲染后再按当前语言取词
 popover.css[ZU3T]: F:托盘浮层样式：复用主界面主题变量，定义 268×180 浮层的头部、电量条、三列数据与淡入动画 | R:code:src/renderer/style.css | A:- | S:-
 popover.html[EU3T]: F:托盘浮层结构：状态点与型号、电量大字与进度条、DPI/回报率/配置三列、打开主界面入口 | R:code:src/renderer/popover.js,code:src/renderer/popover.css | A:- | S:-
 popover.js[DU4S]: F:浮层渲染逻辑：把主进程推送的状态画到界面、按语言重绘、点击或回车打开主界面、Esc 收起 | R:code:src/preload/index.js | A:render,boot,openMain | S:必须写 const bridge = window.api——用 api 作顶层 const 会 SyntaxError 且整份脚本不执行
-style.css[ZU7L]: F:主界面视觉体系：浅薰衣草紫深色主题变量、顶栏/侧栏/卡片/表单/浮层组件、统一焦点环与界面缩放 | R:code:src/renderer/index.html | A:- | S:栅格只认 --page-pad 与 --scrollbar-w：底栏右内边距必须 calc(pad+scrollbar)；禁止页面级 max-width 与嵌套滚动容器（滚动条会吃掉 10px）
+style.css[ZU7L]: F:主界面视觉体系：浅薰衣草紫深色主题变量、顶栏/侧栏/卡片/表单/浮层组件、更新徽标、统一焦点环与界面缩放 | R:code:src/renderer/index.html | A:- | S:栅格只认 --page-pad 与 --scrollbar-w：底栏右内边距必须 calc(pad+scrollbar)；禁止页面级 max-width 与嵌套滚动容器（滚动条会吃掉 10px）
 
 ===/<repository>/src/shared/===
-config-format.js[IG7M]: F:官方 .ict/.icm 文本格式导入导出纯函数：按键五元组、颜色打包整数、宏循环类型与键名表互转 | R:code:src/shared/protocol.js | A:exportProfile,importProfile,exportMacros,importMacros | S:.ict 的 key[] 是 UI 顺序而 App 是矩阵顺序（前进/后退互换，ICT_TO_APP_INDEX=[0,1,2,4,3,5]）；官方 looptype = 硬件 loopType + 1
-i18n.js[CL6M]: F:中英文案字典与语言切换：主进程菜单与渲染层共用，中文逐字取自官方网页驱动文案 | R:code:src/shared/keynames.js | A:t,setLang,getLang,messages | S:中英两套键必须一一对应，test/i18n.test.js 会断言键集合一致，新增文案两边都要加
+config-format.js[IG7M]: F:官方 .ict/.icm 文本格式导入导出纯函数：按键五元组、颜色打包整数、宏循环类型与键名表互转、DPI 下限归一 | R:code:src/shared/protocol.js | A:exportProfile,importProfile,exportMacros,importMacros,clampDpi | S:.ict 的 key[] 是 UI 顺序而 App 是矩阵顺序（前进/后退互换，ICT_TO_APP_INDEX=[0,1,2,4,3,5]）；官方 looptype = 硬件 loopType + 1；导入的 DPI 小于 50（含 0/负数）一律按 50
+i18n.js[CL6M]: F:中英文案字典与语言切换：主进程菜单与渲染层共用，中文逐字取自官方网页驱动文案，含软件更新状态与按钮 | R:code:src/shared/keynames.js | A:t,setLang,getLang,messages | S:中英两套键必须一一对应，test/i18n.test.js 会断言键集合一致，新增文案两边都要加
 keynames.js[CL5M]: F:键位显示名映射：把协议原始枚举（LEFT/KeyA/VOL_INC）翻成中英文界面文案 | R:code:src/shared/i18n.js | A:keyLabel,keyboardLabel | S:只影响显示，协议值与存档永远保持原始枚举名，不得在这里改协议值
 protocol.js[DH9L]: F:HID 协议纯函数层：设备常量、命令构造、键码编码、宏编码、型号/推送解析与 DPI/LOD/回报率映射 | R:code:docs/protocol.md | A:buildSetResolution,buildSetKey,encodeMacro,parseModelInfo,parseStatusPush,clampRate | S:Feature Report 数据区固定 8 字节，超长读取会失败；PAW3950 的 LOD 必须走旋转映射 [2,0,1]；非 8K/有线的 2000Hz+ 在应用层预钳制为 1000Hz
