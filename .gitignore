@@ -7,3 +7,7 @@ _ref/
 .DS_Store
 installer/payload/
 dist-setup*/
+
+# AOCI agent host integration (machine-bound; do not commit)
+.mcp.json
+.mcp.json.backup.*

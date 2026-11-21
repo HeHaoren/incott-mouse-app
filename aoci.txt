@@ -1,0 +1,8 @@
+#AOCI-ROOT-MANIFEST: 1
+#Format-Version: cognition-volumes/v1
+#Locale: zh-CN
+#Project: 因科特（Incott）G24 等系列鼠标的独立桌面配置工具：基于逆向 HID 协议的 Electron 应用，提供 DPI、键位、性能、宏、接收器灯效与 5 份 PC 端配置预设，并自带自绘安装器，不依赖官方网页驱动。
+#Global-Invariants: 所有 HID 访问必须经主进程 withIo 串行队列，并发会读到对方的回包；Feature Report 9 的数据区固定 8 字节；协议值与存档永远使用原始枚举名，只在显示层翻译；DPI 档位颜色固定官方六色、任何界面都不得提供改色入口；写命令 0x01-0x08 与读命令 0x81-0x88 对称；5 个配置是 PC 端预设，硬件只有 1 份板载配置。
+#Volume: id=meta kind=meta path=aoci.meta.txt format=meta-v1 depends=- state=enabled
+#Volume: id=code kind=code path=aoci.code.txt format=object-fras-v2 depends=meta state=enabled
+#Volume: id=database kind=database path=aoci.database.txt format=table-fras-v2 depends=meta state=enabled

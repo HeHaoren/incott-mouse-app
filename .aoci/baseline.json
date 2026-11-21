@@ -1,0 +1,477 @@
+{
+  "version": 1,
+  "created_at": "2026-11-21T04:16:25Z",
+  "updated_at": "2026-11-21T04:47:01Z",
+  "files": {
+    ".gitattributes": {
+      "role": "index",
+      "sha256": "21fa16a2122e2b0360b47502c577428b645437e08e9e87ffba661f84853cb476",
+      "size": 291,
+      "normalized_sha256": "21fa16a2122e2b0360b47502c577428b645437e08e9e87ffba661f84853cb476"
+    },
+    ".gitignore": {
+      "role": "index",
+      "sha256": "944eb4899eccb3696103ea2504fd20c5fcdc3992e3e4fe80100f1c1d4d1fbe66",
+      "size": 178,
+      "normalized_sha256": "944eb4899eccb3696103ea2504fd20c5fcdc3992e3e4fe80100f1c1d4d1fbe66"
+    },
+    ".rivet-config.json": {
+      "role": "index",
+      "sha256": "64f2af0998013522db3d0fc2dab2a7a6b26ecbd2fb7a8ee3d530341bbd4d8fbc",
+      "size": 78,
+      "normalized_sha256": "64f2af0998013522db3d0fc2dab2a7a6b26ecbd2fb7a8ee3d530341bbd4d8fbc"
+    },
+    ".rivet.md": {
+      "role": "index",
+      "sha256": "cc0096bf950f7b7644a06c50694e227dd0e5ec739edaf9e86634f0906403fcc6",
+      "size": 317,
+      "normalized_sha256": "cc0096bf950f7b7644a06c50694e227dd0e5ec739edaf9e86634f0906403fcc6"
+    },
+    ".workbuddy/memory/2026-11-05.md": {
+      "role": "index",
+      "sha256": "518d8fabccd8f2efae179845b73d885d7f865e57d86bcae0f6b21740ea880c90",
+      "size": 7234,
+      "normalized_sha256": "518d8fabccd8f2efae179845b73d885d7f865e57d86bcae0f6b21740ea880c90"
+    },
+    ".workbuddy/memory/2026-11-08.md": {
+      "role": "index",
+      "sha256": "96b11012134b6ee35b08aad81a5fb70e3d9c258a47312ec1699bcb4014120fcd",
+      "size": 4836,
+      "normalized_sha256": "96b11012134b6ee35b08aad81a5fb70e3d9c258a47312ec1699bcb4014120fcd"
+    },
+    ".workbuddy/memory/2026-11-13.md": {
+      "role": "index",
+      "sha256": "78a7e4952dcae589f7b5c2de297348f77ef862e82d1e28cadcdcee1deb320a8a",
+      "size": 16180,
+      "normalized_sha256": "78a7e4952dcae589f7b5c2de297348f77ef862e82d1e28cadcdcee1deb320a8a"
+    },
+    ".workbuddy/memory/2026-11-14.md": {
+      "role": "index",
+      "sha256": "b9db8ddd81658d71bedd9b67e2f0e410d5401ddc6f8cb1f3ea7aa332b317ab73",
+      "size": 15438,
+      "normalized_sha256": "b9db8ddd81658d71bedd9b67e2f0e410d5401ddc6f8cb1f3ea7aa332b317ab73"
+    },
+    ".workbuddy/memory/2026-11-15.md": {
+      "role": "index",
+      "sha256": "e1c4d9f8212fde3ede296b3cea8cb43b5cbb14cf74a68684ac54149710553a33",
+      "size": 3572,
+      "normalized_sha256": "411ad08f801aa066a98593aff0be6a6ee61944f29754415989858455a4ed5190"
+    },
+    ".workbuddy/memory/2026-11-16.md": {
+      "role": "index",
+      "sha256": "aae4d9ea98d6b99da8fcd049e44fba10a1184ee5b9b1fe664aea6e7ca53fde84",
+      "size": 10481,
+      "normalized_sha256": "aae4d9ea98d6b99da8fcd049e44fba10a1184ee5b9b1fe664aea6e7ca53fde84"
+    },
+    ".workbuddy/memory/MEMORY.md": {
+      "role": "index",
+      "sha256": "fd03551cd126af3a59b0af708d09a0a079c221c9fc45cd05dd6b1d9a1ea80056",
+      "size": 10992,
+      "normalized_sha256": "b62e07323bca14dfebcb0558409ab26050aef1ef1087492abac08687e6fee4ff"
+    },
+    "AGENTS.md": {
+      "role": "index",
+      "sha256": "8e6ee54dd92a5cf3c7a11c52c4abedac42dc483804ab26a02a2016a968667546",
+      "size": 18361,
+      "normalized_sha256": "8e6ee54dd92a5cf3c7a11c52c4abedac42dc483804ab26a02a2016a968667546"
+    },
+    "README.md": {
+      "role": "index",
+      "sha256": "bee30e5db348a19cecd238dd118d5ce31287a1f87f8b5d1d10d2a6645ae627e2",
+      "size": 4744,
+      "normalized_sha256": "d617a0f36feaa2053dc4a902b326e9d9265429efec390b723c327cba0708541c"
+    },
+    "aoci.code.txt": {
+      "role": "index",
+      "sha256": "fde49aac6115fb30301642276f19fcab30ab05f39a545c3563e09466c194259f",
+      "size": 12486,
+      "normalized_sha256": "fde49aac6115fb30301642276f19fcab30ab05f39a545c3563e09466c194259f"
+    },
+    "aoci.database.txt": {
+      "role": "index",
+      "sha256": "1b46cd9cf909b0d38e013f51b95211305be80cca8ec3691dc46ff9c25fbb02ec",
+      "size": 2127,
+      "normalized_sha256": "1b46cd9cf909b0d38e013f51b95211305be80cca8ec3691dc46ff9c25fbb02ec"
+    },
+    "aoci.meta.txt": {
+      "role": "index",
+      "sha256": "5ccd06dd2198435423141174e4f3eaed7e7645644070e0b5cc2e20dbc889172a",
+      "size": 2187,
+      "normalized_sha256": "5ccd06dd2198435423141174e4f3eaed7e7645644070e0b5cc2e20dbc889172a"
+    },
+    "aoci.txt": {
+      "role": "index",
+      "sha256": "a66238c4ae98bf817b57355a788c16236ebb7a47dc912c2c9e73d1819ef0ef96",
+      "size": 1053,
+      "normalized_sha256": "a66238c4ae98bf817b57355a788c16236ebb7a47dc912c2c9e73d1819ef0ef96"
+    },
+    "docs/HANDOFF.md": {
+      "role": "index",
+      "sha256": "5cb4ffff4690bbf0a37b586ed9601043ba3108ab6127128c540fd0eab3b1c214",
+      "size": 10616,
+      "normalized_sha256": "bda80edec0cd8311948ff92d2b28c0bae917643a3c0ad061bba715cfeb7a6d09"
+    },
+    "docs/led-behavior.md": {
+      "role": "index",
+      "sha256": "10fb9ed12da151513ea819bde032b7f786314ae9c9c1a7473b30279b4b71a4a0",
+      "size": 3416,
+      "normalized_sha256": "02193c37b9d1e8906e504adbf9ee7e20852108c8a73cb8f7286b0bb1b96a7e21"
+    },
+    "docs/protocol.md": {
+      "role": "index",
+      "sha256": "6e22abc6c34c1038ef8c1e4fd1d827efef1829540b48ab1edb653709eaf11940",
+      "size": 16684,
+      "normalized_sha256": "3c17deb2968f3fba06be5834e0e9be5ec256c69a71e57f58e8211486effa36a3"
+    },
+    "installer/assets/splash.bmp": {
+      "role": "index",
+      "sha256": "ed10481201f6851d2f176a7e027f4752ad7d91550b9fb2755288d9ff8829e628",
+      "size": 288054
+    },
+    "installer/collect.js": {
+      "role": "index",
+      "sha256": "54d238f7c9e72881146e7027fe48c43ea68d555270970ded8ec4cf74cbaf2d0d",
+      "size": 963,
+      "normalized_sha256": "54d238f7c9e72881146e7027fe48c43ea68d555270970ded8ec4cf74cbaf2d0d"
+    },
+    "installer/electron-builder.yml": {
+      "role": "index",
+      "sha256": "be5f3ec9e0d83b9bba87f33a8c7db1e3a58b16b502e57e66918c04ea18f691e0",
+      "size": 641,
+      "normalized_sha256": "be5f3ec9e0d83b9bba87f33a8c7db1e3a58b16b502e57e66918c04ea18f691e0"
+    },
+    "installer/main.js": {
+      "role": "index",
+      "sha256": "0c89abad985aa998c8a637377bf924c84eda01a0386b20bbea2d6c1cce973e67",
+      "size": 11460,
+      "normalized_sha256": "0c89abad985aa998c8a637377bf924c84eda01a0386b20bbea2d6c1cce973e67"
+    },
+    "installer/package.json": {
+      "role": "index",
+      "sha256": "95a7be33335e0af3f6b6b04f91ce76d82c01800c6a695a969079ab89e8e2a500",
+      "size": 265,
+      "normalized_sha256": "79c1c945d3c3d2cdb8b045b59cf23067eec94f535a0a724daeb45777c3165b9c"
+    },
+    "installer/preload.js": {
+      "role": "index",
+      "sha256": "cf85c1fc625df0b767f89e463c68814f5562a6075596f1fdbd7abe7bdac4d25b",
+      "size": 728,
+      "normalized_sha256": "cf85c1fc625df0b767f89e463c68814f5562a6075596f1fdbd7abe7bdac4d25b"
+    },
+    "installer/sync-payload.js": {
+      "role": "index",
+      "sha256": "3784e727669a964744eca9bf0c3ea77ebc89b1320cfcddb75f25b24c0bb8372c",
+      "size": 2163,
+      "normalized_sha256": "3784e727669a964744eca9bf0c3ea77ebc89b1320cfcddb75f25b24c0bb8372c"
+    },
+    "installer/ui/index.html": {
+      "role": "index",
+      "sha256": "4458321d86c53f93be4cdfae0ed0061155e5a77e7337099d2c2cb700534f5e90",
+      "size": 3981,
+      "normalized_sha256": "4458321d86c53f93be4cdfae0ed0061155e5a77e7337099d2c2cb700534f5e90"
+    },
+    "installer/ui/setup.css": {
+      "role": "index",
+      "sha256": "44fbb92010124f214addd30b8937e9d7a4509374b30027f4310a79ca0a3ecf61",
+      "size": 7823,
+      "normalized_sha256": "44fbb92010124f214addd30b8937e9d7a4509374b30027f4310a79ca0a3ecf61"
+    },
+    "installer/ui/setup.js": {
+      "role": "index",
+      "sha256": "dd15790f0c8aff4e962c31d55ef068d4e7cc3bcfee80bdb0bfff81e0c6275d54",
+      "size": 3788,
+      "normalized_sha256": "dd15790f0c8aff4e962c31d55ef068d4e7cc3bcfee80bdb0bfff81e0c6275d54"
+    },
+    "package-lock.json": {
+      "role": "observe",
+      "sha256": "5c4430916b58e0523dcb998bc6b4828fb12abc86d2a3bbb98b9a52918f65ffbb",
+      "size": 198996,
+      "normalized_sha256": "188a9dc354c6bc01ac3daf3d815af1aa3cd4fe4a5e47e5c758df3ea0c26e98e0"
+    },
+    "package.json": {
+      "role": "index",
+      "sha256": "d3b1e47c542cbd311fa9b56e49263fc86c71d734825b0b4f083d48bba2829978",
+      "size": 2031,
+      "normalized_sha256": "a613cea0953798e23a45a5c5ba5067e97d7ed84fbb24036548f5fe06f01c5b01"
+    },
+    "src/main/hid.js": {
+      "role": "index",
+      "sha256": "0ba48da091e200cdba6061a15d3bdb75f389952bb16638eb9b1af6acbffd6b92",
+      "size": 9815,
+      "normalized_sha256": "5701db9d00bb13b7e914a0a36e6f6cced4e93b7eb0404e0904ea16295b4dff36"
+    },
+    "src/main/index.js": {
+      "role": "index",
+      "sha256": "770e42de6e12979282529c7b0e50029441f8cfdfd0343025194a3d6e533466e3",
+      "size": 44408,
+      "normalized_sha256": "fca349b1cc0f68214913bd8aab39254bf683e4ff2ecdd5e909ec31e17b1f52d1"
+    },
+    "src/main/tray-popover.js": {
+      "role": "index",
+      "sha256": "991590b0b1bdcd32df32a83f45184629aaa54da975fefbecf98c8e147ec8d830",
+      "size": 5241,
+      "normalized_sha256": "991590b0b1bdcd32df32a83f45184629aaa54da975fefbecf98c8e147ec8d830"
+    },
+    "src/preload/index.js": {
+      "role": "index",
+      "sha256": "7c8fbaab269f69ed539b7127b69338cff6f5b64a524c032eeead51cc2d3d96fd",
+      "size": 5096,
+      "normalized_sha256": "a0900e438dd6e3ee1e563051e172fe019f5be85585fcc5a3d97289378ec2d0c7"
+    },
+    "src/renderer/app.js": {
+      "role": "index",
+      "sha256": "361caf78f35860790dbc8502542f9b416dac05d76f8366b3d1a65888872bcc9a",
+      "size": 66161,
+      "normalized_sha256": "b6b6012e05342ed0c392cc6d2c9c96c9def6f9c454f361366be89f9ee1c92f77"
+    },
+    "src/renderer/index.html": {
+      "role": "index",
+      "sha256": "fb6a08de330c4be196a10e766a52f427db725829803c00c534ec2c723ae66614",
+      "size": 19312,
+      "normalized_sha256": "fb6a08de330c4be196a10e766a52f427db725829803c00c534ec2c723ae66614"
+    },
+    "src/renderer/popover.css": {
+      "role": "index",
+      "sha256": "1c1470fcfe27219428c6ff1ab11372f3fd1cba60cecb10746364bcfbb73031b0",
+      "size": 3579,
+      "normalized_sha256": "e03124eabdaa087f0a36b21f366d10c9372e721820797dee2f0f0e829027fd8b"
+    },
+    "src/renderer/popover.html": {
+      "role": "index",
+      "sha256": "a078572405cbed346fc68f47c80b03271ad3012b8f404519655208d3adcb2860",
+      "size": 1448,
+      "normalized_sha256": "a078572405cbed346fc68f47c80b03271ad3012b8f404519655208d3adcb2860"
+    },
+    "src/renderer/popover.js": {
+      "role": "index",
+      "sha256": "c29e05a96edd6a10ffbdcfc674cf6400a8534f546297702f452b52926d8d915d",
+      "size": 4341,
+      "normalized_sha256": "c29e05a96edd6a10ffbdcfc674cf6400a8534f546297702f452b52926d8d915d"
+    },
+    "src/renderer/style.css": {
+      "role": "index",
+      "sha256": "1ebaeaad12fd1262b8f62177e56db86d9c239d6964ec8605a275e7cea9ee0c15",
+      "size": 45289,
+      "normalized_sha256": "b013b6ee751fd28b2be65574b17dc14a611b330a78fe15cfb346b37a31d75274"
+    },
+    "src/shared/config-format.js": {
+      "role": "index",
+      "sha256": "dffcdff082eed91290c42e76a4d9b8ffebca5765a31134a04b46e77477403b13",
+      "size": 14083,
+      "normalized_sha256": "dffcdff082eed91290c42e76a4d9b8ffebca5765a31134a04b46e77477403b13"
+    },
+    "src/shared/i18n.js": {
+      "role": "index",
+      "sha256": "9ebc8782d780dd4b693c3190b85c6c1b0aea237a9e916b37fdec4ff31aed6fb0",
+      "size": 15768,
+      "normalized_sha256": "1cb8b65ead83629824179b4f39abc52cfba438a574d79765e44b23da372ad75f"
+    },
+    "src/shared/keynames.js": {
+      "role": "index",
+      "sha256": "88281cecc42419dd1dfecc23afb9a6515c6579753728e3d3a7ad6684dd211c38",
+      "size": 5358,
+      "normalized_sha256": "88281cecc42419dd1dfecc23afb9a6515c6579753728e3d3a7ad6684dd211c38"
+    },
+    "src/shared/protocol.js": {
+      "role": "index",
+      "sha256": "8b7dc677db902e2bbefe8e9760443d8333bb094b6e847662dd5625cd3d8a51a7",
+      "size": 20315,
+      "normalized_sha256": "15605d70a19e8cfe03c4541a7c8e264b8954f12f0dfef61fe3153b4746b62336"
+    },
+    "test/config-format.test.js": {
+      "role": "observe",
+      "sha256": "8e82ed8164a01d1c424df089f3340f094bc8416254fc21c48e72d64cca5aedd7",
+      "size": 6085,
+      "normalized_sha256": "8e82ed8164a01d1c424df089f3340f094bc8416254fc21c48e72d64cca5aedd7"
+    },
+    "test/i18n.test.js": {
+      "role": "observe",
+      "sha256": "90bf26836ac699172b51c7a36401c7f161087f0c9a46bd49e3a793306fcf410f",
+      "size": 1292,
+      "normalized_sha256": "90bf26836ac699172b51c7a36401c7f161087f0c9a46bd49e3a793306fcf410f"
+    },
+    "test/keynames.test.js": {
+      "role": "observe",
+      "sha256": "fe7e29a0920e6064e643d7f3fb6974f8523d5595ee09694f010fc3283e9fb39c",
+      "size": 2548,
+      "normalized_sha256": "fe7e29a0920e6064e643d7f3fb6974f8523d5595ee09694f010fc3283e9fb39c"
+    },
+    "test/protocol.test.js": {
+      "role": "observe",
+      "sha256": "799c70a62a7d9f6df2487e1a33176a2a82401052c6625628c2293a1de25a6a19",
+      "size": 13237,
+      "normalized_sha256": "3bad761889e9956dcb84e0d50ba5f9dda2943d50a67064dda1320ff330ef8db1"
+    }
+  },
+  "managed_scope": {
+    "version": "managed-scope-baseline/v1",
+    "policy_identity": "e0f548d87fe5462c412a1c54409871a60ddf2ae5c30609258ff8739fdfcc8e76",
+    "observe_change_policy": "review_required",
+    "budget_policy_identity": "15e9b37a6c57e9bf03c9df3d0d049eb5b9a7f5540f9d34960408114e2538a32d",
+    "budget_policy": {
+      "version": "cognition-budget-policy/v1",
+      "mode": "enforce",
+      "whole_index": {
+        "target_tokens": 200000,
+        "warning_tokens": 300000,
+        "max_tokens": 400000
+      },
+      "r": [
+        {
+          "min_c": 1,
+          "max_c": 4,
+          "target_tokens": 25,
+          "max_tokens": 50
+        },
+        {
+          "min_c": 5,
+          "max_c": 7,
+          "target_tokens": 45,
+          "max_tokens": 90
+        },
+        {
+          "min_c": 8,
+          "max_c": 8,
+          "target_tokens": 70,
+          "max_tokens": 140
+        },
+        {
+          "min_c": 9,
+          "max_c": 9,
+          "target_tokens": 90,
+          "max_tokens": 180
+        }
+      ],
+      "s": [
+        {
+          "min_c": 1,
+          "max_c": 4,
+          "target_tokens": 20,
+          "max_tokens": 40
+        },
+        {
+          "min_c": 5,
+          "max_c": 7,
+          "target_tokens": 40,
+          "max_tokens": 80
+        },
+        {
+          "min_c": 8,
+          "max_c": 8,
+          "target_tokens": 70,
+          "max_tokens": 140
+        },
+        {
+          "min_c": 9,
+          "max_c": 9,
+          "target_tokens": 100,
+          "max_tokens": 200
+        }
+      ]
+    },
+    "apply_authorization_mode": "auto"
+  },
+  "database_cognition": {
+    "version": "database-cognition-binding/v1",
+    "entries": [
+      {
+        "object_ref": "database://meridian/main/access_log",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "5ef6e2aa53f1ed1f342059fcaab4357c3ea4c96846bc2e638485ebfc3de9dbb8",
+        "entry_sha256": "71db3bf2dc628113102bc9bede7b8c2a710e8786e04abcc3a522b17113825013"
+      },
+      {
+        "object_ref": "database://meridian/main/cli_entries",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "ede33226267d8f3bd09c4ccee7df33af6c40e1655be39a3418047a5f31d60f1e",
+        "entry_sha256": "ed0becd401f56024ae778d511db7676c39fbbfb3dd113899a51b3f1a5292c4b1"
+      },
+      {
+        "object_ref": "database://meridian/main/co_edits",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "2f2bc4afc94110a15498d8748a39f6e7526878093873c6a3c22fc843afb51c76",
+        "entry_sha256": "e1817cf4b7518da46f87ee1e021a21603094c82d75bcdf5a812f2441625570c7"
+      },
+      {
+        "object_ref": "database://meridian/main/edges",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "df629d68188d0302159a6e47bc57918eeb18775c0ceb2e3370d12953e3751969",
+        "entry_sha256": "18f96fc3cdf3dd20ff644a064a028672b4b4101d3e8917e93c8f6adcf849843e"
+      },
+      {
+        "object_ref": "database://meridian/main/files",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "a8385126d5627a691db202db8dce34f50a700392fdcebeee76ba6f60e4ee9a8d",
+        "entry_sha256": "5bfd2b968a93429eb532b2988042436d3ad25373a5e8659b5c6e8ac737136765"
+      },
+      {
+        "object_ref": "database://meridian/main/immune_memory",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "b9e095dc4e420d3ab198f8304093d0cf348d62e9964dd20a56ebaaa54ffebee5",
+        "entry_sha256": "381a6b8b41d0fed60cb43e27ae47e552e826eef3f2e005a28078759c7f21ae78"
+      },
+      {
+        "object_ref": "database://meridian/main/meridian_meta",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "2a5a2c876392c850e443ec06d8d0cce95c86acd3953b0292c7e7d667275a72a2",
+        "entry_sha256": "ea2591df3798560b7e5419483b43fc47847211ca2b86e0567e7551e8b063e113"
+      },
+      {
+        "object_ref": "database://meridian/main/mistake_entries",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "3e5bce38656b3df1f0115f88a90a52a25d80c191f0e29c797c969bc7070563e6",
+        "entry_sha256": "d0aa0c90074ea41152def801878d223a78921301e7e05ba87f33a60335c60011"
+      },
+      {
+        "object_ref": "database://meridian/main/module_summaries",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "74f327e6fe7008e02a450f2e964583eaef03b1b5c3f47560855c4f97d8e103f8",
+        "entry_sha256": "a1e6d7a0300a51524a0b0df6a26e530f858a2e9fc86bf34612b7bd9f14122e3c"
+      },
+      {
+        "object_ref": "database://meridian/main/p3_state",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "bf22484af36428017698547dbdb65d71ce517ed7f717276f91441c1eecb83b5e",
+        "entry_sha256": "0b5bf65edb06e0cb7118372946a9513711c90448132f5c962e58a7de019a399b"
+      },
+      {
+        "object_ref": "database://meridian/main/physarum_edges",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "e719a231b6c6e144e7aaf12459f5f75dae8c3dfed7f37b6bed195750b9026960",
+        "entry_sha256": "1f931adc8102679e4a1c6449bf0209f03fd9867e55eaf7d82e1e04638e1eb854"
+      },
+      {
+        "object_ref": "database://meridian/main/physarum_prediction_observations",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "ae00ded028093d2b26dd4a926fd695761ff30b7d56f921fd9bbf6763a596343c",
+        "entry_sha256": "b844bf4a49d732ed9b832a4a78bb988fb71cb6f1672b6120676248025257cba1"
+      },
+      {
+        "object_ref": "database://meridian/main/sensorimotor_log",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "337acced4d3208f0958d92de2be04b25a80959e74c54b2249f62279c05364574",
+        "entry_sha256": "a513d6e0fb100e6914815c066d06115830ca1990b0eac73ff070733acd307b56"
+      },
+      {
+        "object_ref": "database://meridian/main/symbols",
+        "source_id": "meridian",
+        "evidence_version": "database-evidence/v1",
+        "table_evidence_sha256": "524b0f0e86624b439a321fd03525beac6bbc447cf905cd14da577516da660f3d",
+        "entry_sha256": "1758b9faba11219e596a1caded2d5f3c6688755b131fdd9fe7a3d03b9e3fc5d0"
+      }
+    ]
+  }
+}

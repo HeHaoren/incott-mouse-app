@@ -1,0 +1,206 @@
+{
+  "version": "database-evidence-baseline/v1",
+  "sources": [
+    {
+      "source_id": "meridian",
+      "engine": "sqlite",
+      "database": ".rivet/meridian.db",
+      "namespaces": [
+        "main"
+      ],
+      "include_namespaces": [],
+      "exclude_namespaces": [],
+      "include_tables": [],
+      "exclude_tables": [],
+      "case_semantics": {
+        "identifier_case": "preserve_ascii_case_insensitive"
+      },
+      "evidence_version": "database-evidence/v1",
+      "source_snapshot_sha256": "3babd147d3a1f3eabb0004e22c349e94f98982386e17acfb418acaf281dcd2aa",
+      "tables": [
+        {
+          "object_ref": "database://meridian/main/access_log",
+          "table_evidence_sha256": "5ef6e2aa53f1ed1f342059fcaab4357c3ea4c96846bc2e638485ebfc3de9dbb8",
+          "component_hashes": {
+            "columns": "f88723cdf4ef8d89390c63326a5f454f8b43200e3e3d0ff6f043a5403ec66764",
+            "primary_key": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "c5006d34671839cf3a19886a4fd7d954fef37a2e61383776c4ae9a1e00032dc2",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/cli_entries",
+          "table_evidence_sha256": "ede33226267d8f3bd09c4ccee7df33af6c40e1655be39a3418047a5f31d60f1e",
+          "component_hashes": {
+            "columns": "f7f7d0ee7ea732f69fde504884c923b9c30ad0c142e124f746652fa8c1dd7e7c",
+            "primary_key": "b845a3a4690de9b78aebc7bb7d77dec6083d2d26ce2633482d1f135bbad3054e",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "f1ce6551a9c111d8f6bc6fedf1feed9c879ca63c3444d10fac08ff3cf21662bb",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/co_edits",
+          "table_evidence_sha256": "2f2bc4afc94110a15498d8748a39f6e7526878093873c6a3c22fc843afb51c76",
+          "component_hashes": {
+            "columns": "49e8987a7d91b89de8a4aea37cdd60721f8c17380078a3d33abd906f1239b6ad",
+            "primary_key": "0bc819b9133be3db7463ff922239d1250350cbd6ae8b5771bea1d5082bdeadc8",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "a3b23becd23450fdc100c4e00ecacf93e46a847af9527bafac9db2a4da639ed6",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/edges",
+          "table_evidence_sha256": "df629d68188d0302159a6e47bc57918eeb18775c0ceb2e3370d12953e3751969",
+          "component_hashes": {
+            "columns": "1f499b96fd7e2d9d20f70e04ecf15f136e763c6838993da0430b707f1806bd24",
+            "primary_key": "6bf46de59bca183397632b629122040bc4cd8e082af6b0d6e405b81992008e9b",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "ad114dfe7d0b4eb560db7bf0db4d082a51df4ee71c87d7fe8da29c3b406caa23",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/files",
+          "table_evidence_sha256": "a8385126d5627a691db202db8dce34f50a700392fdcebeee76ba6f60e4ee9a8d",
+          "component_hashes": {
+            "columns": "6e5bbdbf328caf04e3859236412b72ba0ba5aecae84af963a7228009bca94d0f",
+            "primary_key": "d01c4fa3faf0994d43102f0d6486583dd13ffea01e7c9fdf1205089ede31e985",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "cbd8cd8301af5ed1dc6f12ef58592ab12effe4cda6292b0281c40c2fe712e951",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/immune_memory",
+          "table_evidence_sha256": "b9e095dc4e420d3ab198f8304093d0cf348d62e9964dd20a56ebaaa54ffebee5",
+          "component_hashes": {
+            "columns": "490caf00ddce7dc23fb3edccb8ff2081f784c6c74ad3d7fd0a3843188a6da0de",
+            "primary_key": "72600e39cee054d3648366236e95614b07942c37d7913e85a2b0be9ad3abe0ed",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "795f696081793d4eb2a20e6b6bc90b7dacc8773cca1b15bad9bac90158db9a18",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/meridian_meta",
+          "table_evidence_sha256": "2a5a2c876392c850e443ec06d8d0cce95c86acd3953b0292c7e7d667275a72a2",
+          "component_hashes": {
+            "columns": "e08d7e3e5641a634614e8d031124b82a32c140ea87d1932cfaccfdb7c41bdd21",
+            "primary_key": "7e257908cc00de098713acc9865a67e638f7568006688b7322078fcfc0c81435",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "4ab1c487116ae47fd60627386ec126b2e36b4e085717a4a4c5a7a38d165b9652",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/mistake_entries",
+          "table_evidence_sha256": "3e5bce38656b3df1f0115f88a90a52a25d80c191f0e29c797c969bc7070563e6",
+          "component_hashes": {
+            "columns": "21c4339e18949baa71fc2df2dae6da32b51d9a7c5d62128bd28b4d1e7add372d",
+            "primary_key": "72600e39cee054d3648366236e95614b07942c37d7913e85a2b0be9ad3abe0ed",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "80b45ef2ee9ab937f8d0b3619bc8b5588149f1280753314f7d453ed062c299f8",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/module_summaries",
+          "table_evidence_sha256": "74f327e6fe7008e02a450f2e964583eaef03b1b5c3f47560855c4f97d8e103f8",
+          "component_hashes": {
+            "columns": "aea67d2af16ce1c72870a11a726951e8ac6d12400ff4c0cd7eb685758764d193",
+            "primary_key": "3ea6551d1c893739a5ac169d72e447e63598172ab7e25e528a35989d4b2d098d",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "e4f2f5ec85f3ff6794fb3f446ebd5f4c8383167d0a7bdfde87f74ba878b1c43f",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/p3_state",
+          "table_evidence_sha256": "bf22484af36428017698547dbdb65d71ce517ed7f717276f91441c1eecb83b5e",
+          "component_hashes": {
+            "columns": "9a7c81d7e0f034cefd9d26a57d101ffd9ac8f5ee1d77e27ecd573794858e6165",
+            "primary_key": "11ffb16b9d0d24ba95ce428a81a89c7d4db610357bdcf5b26691d231ead53021",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "ef9f4d10eb71974bce5e677226a87b7887b5deec41b56555e449f6a7af6c3bed",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/physarum_edges",
+          "table_evidence_sha256": "e719a231b6c6e144e7aaf12459f5f75dae8c3dfed7f37b6bed195750b9026960",
+          "component_hashes": {
+            "columns": "6d90b2984b6b321a6909cb13223e0d5411b8bfc6d4b769433ab30b1c68dacc34",
+            "primary_key": "0bc819b9133be3db7463ff922239d1250350cbd6ae8b5771bea1d5082bdeadc8",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "8d11fc305e235d0ef4d911cde4d8ac3871621ecb31aecf2546c7cfb59beafc46",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/physarum_prediction_observations",
+          "table_evidence_sha256": "ae00ded028093d2b26dd4a926fd695761ff30b7d56f921fd9bbf6763a596343c",
+          "component_hashes": {
+            "columns": "19156d38b546d4427d8eff79c0b4b77eec480a2ff5fd75a85b50d2b8df421226",
+            "primary_key": "72600e39cee054d3648366236e95614b07942c37d7913e85a2b0be9ad3abe0ed",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "9c8c88e5f2316e1f04109d1e412117d63e940e69a00401269b015ddaea78f9f9",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/sensorimotor_log",
+          "table_evidence_sha256": "337acced4d3208f0958d92de2be04b25a80959e74c54b2249f62279c05364574",
+          "component_hashes": {
+            "columns": "0b582281a7259e09366d6823334dc309ef933b75824096794fb25df89c0c3e17",
+            "primary_key": "72600e39cee054d3648366236e95614b07942c37d7913e85a2b0be9ad3abe0ed",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "3e6bb07c500fd41f9b7598ad8d8eb1e2988fd648b48ea63bcffcaec131a87b03",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        },
+        {
+          "object_ref": "database://meridian/main/symbols",
+          "table_evidence_sha256": "524b0f0e86624b439a321fd03525beac6bbc447cf905cd14da577516da660f3d",
+          "component_hashes": {
+            "columns": "043262f85bf795eba48e8e891a39563e176a37f6df7b9ab57596eabab70069d6",
+            "primary_key": "72600e39cee054d3648366236e95614b07942c37d7913e85a2b0be9ad3abe0ed",
+            "unique_constraints": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "foreign_keys": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "checks": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+            "indexes": "d3c44cbb502c5d22859aa9b45865ee72545f819adc044c359cc022151e88d8c4",
+            "partition": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed"
+          }
+        }
+      ]
+    }
+  ]
+}

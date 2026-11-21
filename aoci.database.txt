@@ -1,0 +1,17 @@
+#AOCI-DATABASE-VOLUME: 1
+
+===meridian/main/database://meridian/main/===
+access_log[LO4T]: F:记录 Agent 对仓库文件的访问事件，供访问频度与最近访问时间查询 | R:- | A:file_path,accessed_at | S:-
+cli_entries[CK5T]: F:登记 meridian CLI 的每个 flag、处理函数与接线状态，作为命令面的事实清单 | R:- | A:flag,source_file | S:-
+co_edits[RA5T]: F:按文件对累计共同编辑强度与最后编辑轮次，用于衡量文件间的协作耦合 | R:- | A:file_a,file_b | S:-
+edges[RA6T]: F:存储实体间带类型、权重与置信度的有向关系边，是知识图谱的骨干表 | R:- | A:source_id,target_id,kind | S:-
+files[SK6T]: F:登记被索引文件的内容哈希与索引时间，作为增量索引的基准清单 | R:- | A:path | S:-
+immune_memory[EA6T]: F:保存 Agent 遇到过的模式及其响应模板、亲和度与命中统计，供后续识别复用 | R:- | A:id,pattern | S:-
+meridian_meta[KC4T]: F:以键值形式保存 meridian 数据库自身的元数据与版本标记 | R:- | A:key | S:-
+mistake_entries[ER5T]: F:记录犯错条目、上下文与解决办法，可按错误文本检索复用 | R:- | A:id,error | S:-
+module_summaries[AA6T]: F:按目录保存模块摘要、关键导出与文件数，作为代码结构的聚合视图 | R:- | A:dir_path | S:-
+p3_state[SG5T]: F:按 kind 与 version 保存分阶段状态 JSON 快照，支持版本化读取 | R:- | A:kind,version | S:-
+physarum_edges[RA5T]: F:保存粘菌网络模型的文件对边权、流量、固化与激活统计，用于演化式关联预测 | R:- | A:file_a,file_b | S:-
+physarum_prediction_observations[TA5T]: F:记录一次预测的候选文件与随后实际观察到的文件及命中排名，用于评估预测提前量 | R:- | A:id,source_file,observed_file | S:-
+sensorimotor_log[LO4T]: F:记录每次工具调用的上下文哈希、工具名、成败与耗时，用于工具使用统计 | R:- | A:id,context_hash,tool_name | S:-
+symbols[CK5T]: F:登记代码符号的名称、种类、所在文件与行号及导出标记，供符号检索 | R:- | A:id,name,file_path | S:-
